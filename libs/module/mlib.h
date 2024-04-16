@@ -19,53 +19,15 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#pragma once
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <dlfcn.h>
+class SomeInterface {
+public:
+  virtual ~SomeInterface() {}
 
-#include <iostream>
+  virtual int method(const char *name) = 0;
+};
 
-#include "module/mlib.h"
-#include "shared/slib.h"
-
-void *dlhandle;
-
-SomeInterface *LoadModuleObject(const char *lib) {
-  dlhandle = dlopen(lib, RTLD_LAZY | RTLD_LOCAL);
-  if (!dlhandle)
-    return nullptr;
-
-  void *fn = dlsym(dlhandle, "getObject");
-  if (!fn)
-    return nullptr;
-
-  SomeInterface *(*getobj)() = reinterpret_cast<SomeInterface *(*)()>(fn);
-
-  return getobj ? getobj() : nullptr;
-}
-
-void UnloadModule() {
-  if (dlhandle) {
-    dlclose(dlhandle);
-    dlhandle = nullptr;
-  }
-}
-
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  std::cout << "Hello, world!" << std::endl;
-
-  SomeClass s;
-
-  SomeInterface *i = LoadModuleObject("libmymod.so");
-  if (i && i->method("Slim Shady") != 42)
-    std::cout << "Whoops, didn't get 42." << std::endl;
-
-  UnloadModule();
-
-  return 0;
+extern "C" {
+SomeInterface *getObject();
 }

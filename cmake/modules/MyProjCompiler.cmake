@@ -37,6 +37,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 find_package(Threads)
+find_library(MYPROJ_FOUND_DL dl dlfcn.h)
+if(NOT MYPROJ_FOUND_DL)
+  message(WARNING "libdl not found. (required for loading module libraries)")
+endif()
 
 # ##############################################################################
 # Set default CMAKE_BUILD_TYPE when not specified.
@@ -352,12 +356,89 @@ function(myproj_add_shared_lib)
       install(
         TARGETS ${MYPROJ_ADD_SHARED_LIB_TARGET}
         EXPORT ${MYPROJ_ADD_SHARED_LIB_EXPORT}
-        RUNTIME DESTINATION ${dest}
+        LIBRARY DESTINATION ${dest}
                 COMPONENT ${MYPROJ_ADD_SHARED_LIB_COMPONENT})
     else()
       install(TARGETS ${MYPROJ_ADD_SHARED_LIB_TARGET}
-              RUNTIME DESTINATION ${dest}
+              LIBRARY DESTINATION ${dest}
                       COMPONENT ${MYPROJ_ADD_SHARED_LIB_COMPONENT})
+    endif()
+  endif()
+
+endfunction()
+
+function(myproj_add_module_lib)
+  set(options CEXTENSIONS CXXEXTENSIONS)
+  set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
+  set(multiValueArgs SRC LIBS INCS)
+  cmake_parse_arguments(MYPROJ_ADD_MODULE_LIB "${options}" "${oneValueArgs}"
+                        "${multiValueArgs}" ${ARGN})
+
+  add_library(${MYPROJ_ADD_MODULE_LIB_TARGET} MODULE
+              ${MYPROJ_ADD_MODULE_LIB_SRC})
+
+  target_include_directories(
+    ${MYPROJ_ADD_MODULE_LIB_TARGET}
+    PUBLIC $<BUILD_INTERFACE:${MYPROJ_INCLUDE_PATH}>
+           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+  if(MYPROJ_ADD_MODULE_LIB_INCS)
+    target_include_directories(${MYPROJ_ADD_MODULE_LIB_TARGET}
+                               PUBLIC ${MYPROJ_ADD_MODULE_LIB_INCS})
+  endif()
+
+  target_compile_definitions(${MYPROJ_ADD_MODULE_LIB_TARGET}
+                             PRIVATE HAVE_CONFIG_H=1 PIC=1)
+
+  target_link_libraries(${MYPROJ_ADD_MODULE_LIB_TARGET}
+                        ${MYPROJ_ADD_MODULE_LIB_LIBS})
+
+  if(MYPROJ_ADD_MODULE_LIB_CEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_MODULE_LIB_CSTD)
+    set_c_standard(${MYPROJ_ADD_MODULE_LIB_TARGET}
+                   ${MYPROJ_ADD_MODULE_LIB_CSTD} ${exts})
+  endif()
+
+  if(MYPROJ_ADD_MODULE_LIB_CXXEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_MODULE_LIB_CXXSTD)
+    set_cxx_standard(${MYPROJ_ADD_MODULE_LIB_TARGET}
+                     ${MYPROJ_ADD_MODULE_LIB_CXXSTD} ${exts})
+  endif()
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    set_property(
+      SOURCE ${MYPROJ_ADD_MODULE_LIB_SRC}
+      APPEND_STRING
+      PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
+    target_link_libraries(${MYPROJ_ADD_MODULE_LIB_TARGET} "-l${GCOV_LIBRARY}")
+  endif()
+
+  if(MYPROJ_ADD_MODULE_LIB_COMPONENT)
+    if(MYPROJ_ADD_MODULE_LIB_DESTINATION)
+      set(dest ${MYPROJ_ADD_MODULE_LIB_DESTINATION})
+    else()
+      set(dest ${MYPROJ_LIB_INSTALL_DIR}/${CMAKE_PROJECT_NAME})
+    endif()
+
+    if(MYPROJ_ADD_MODULE_LIB_EXPORT)
+      install(
+        TARGETS ${MYPROJ_ADD_MODULE_LIB_TARGET}
+        EXPORT ${MYPROJ_ADD_MODULE_LIB_EXPORT}
+        LIBRARY DESTINATION ${dest}
+                COMPONENT ${MYPROJ_ADD_MODULE_LIB_COMPONENT})
+    else()
+      install(TARGETS ${MYPROJ_ADD_MODULE_LIB_TARGET}
+              LIBRARY DESTINATION ${dest}
+                      COMPONENT ${MYPROJ_ADD_MODULE_LIB_COMPONENT})
     endif()
   endif()
 

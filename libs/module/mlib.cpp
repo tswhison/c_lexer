@@ -23,49 +23,20 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <dlfcn.h>
-
 #include <iostream>
 
-#include "module/mlib.h"
-#include "shared/slib.h"
+#include "mlib.h"
 
-void *dlhandle;
+class SomeConcrete : public SomeInterface {
+public:
+  SomeConcrete() {}
 
-SomeInterface *LoadModuleObject(const char *lib) {
-  dlhandle = dlopen(lib, RTLD_LAZY | RTLD_LOCAL);
-  if (!dlhandle)
-    return nullptr;
+  int method(const char *name) override;
+};
 
-  void *fn = dlsym(dlhandle, "getObject");
-  if (!fn)
-    return nullptr;
-
-  SomeInterface *(*getobj)() = reinterpret_cast<SomeInterface *(*)()>(fn);
-
-  return getobj ? getobj() : nullptr;
+int SomeConcrete::method(const char *name) {
+  std::cout << "Hello, " << name << ", from the module library!" << std::endl;
+  return 42;
 }
 
-void UnloadModule() {
-  if (dlhandle) {
-    dlclose(dlhandle);
-    dlhandle = nullptr;
-  }
-}
-
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  std::cout << "Hello, world!" << std::endl;
-
-  SomeClass s;
-
-  SomeInterface *i = LoadModuleObject("libmymod.so");
-  if (i && i->method("Slim Shady") != 42)
-    std::cout << "Whoops, didn't get 42." << std::endl;
-
-  UnloadModule();
-
-  return 0;
-}
+SomeInterface *getObject() { return new SomeConcrete(); }
