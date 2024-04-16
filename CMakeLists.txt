@@ -198,3 +198,7 @@ endif()
 
 add_subdirectory(libs)
 add_subdirectory(app)
+
+if(MYPROJ_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()

@@ -46,7 +46,9 @@ SomeInterface *LoadModuleObject(const char *lib) {
   return getobj ? getobj() : nullptr;
 }
 
-void UnloadModule() {
+void UnloadModule(SomeInterface *p) {
+  if (p)
+    delete p;
   if (dlhandle) {
     dlclose(dlhandle);
     dlhandle = nullptr;
@@ -65,7 +67,7 @@ int main(int argc, char *argv[]) {
   if (i && i->method("Slim Shady") != 42)
     std::cout << "Whoops, didn't get 42." << std::endl;
 
-  UnloadModule();
+  UnloadModule(i);
 
   return 0;
 }
