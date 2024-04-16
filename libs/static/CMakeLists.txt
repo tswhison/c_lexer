@@ -20,31 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-myproj_add_exe(
+myproj_add_static_lib(
   TARGET
-  mycxxapp
-  COMPONENT
-  mycxxapp
-  SRC
-  main.cpp
-  LIBS
-  myslib
-  ${CMAKE_DL_LIBS}
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  CXXSTD
-  17)
-
-myproj_add_exe(
-  TARGET
-  mycapp
-  COMPONENT
-  mycapp
-  SRC
-  main.c
-  LIBS
   myarch
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  COMPONENT
+  myarch
+  SRC
+  arch.c
   CSTD
   11)

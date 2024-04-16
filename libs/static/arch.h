@@ -20,20 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
+#ifndef __ARCH_H__
+#define __ARCH_H__
+
+int myfunc(const char *name);
+
 #endif
-#include <stdio.h>
-
-#include "static/arch.h"
-
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  printf("Hello, world!\n");
-  if (myfunc("Bigfoot") != 42)
-    printf("Whoops! Expected 42.\n");
-
-  return 0;
-}

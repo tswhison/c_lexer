@@ -25,15 +25,7 @@
 #endif
 #include <stdio.h>
 
-#include "static/arch.h"
-
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  printf("Hello, world!\n");
-  if (myfunc("Bigfoot") != 42)
-    printf("Whoops! Expected 42.\n");
-
-  return 0;
+int myfunc(const char *name) {
+  printf("Hello, %s, from the static library!\n", name);
+  return 42;
 }

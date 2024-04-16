@@ -64,8 +64,8 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Coverage")
       CACHE STRING "gcov library" FORCE)
 endif()
 
-set(MYPROJ_EXTRA_CFLAGS "-fPIC -Wall -Wextra -Werror -pthread")
-set(MYPROJ_EXTRA_CXXFLAGS "-fPIC -Wall -Wextra -Werror")
+set(MYPROJ_EXTRA_CFLAGS "-Wall -Wextra -Werror -pthread")
+set(MYPROJ_EXTRA_CXXFLAGS "-Wall -Wextra -Werror")
 
 if(CMAKE_C_FLAGS_DEBUG STREQUAL "-g")
   set(CMAKE_C_FLAGS_DEBUG "-ggdb3")
@@ -95,8 +95,6 @@ foreach(_cxxflag CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
         CACHE STRING "With strict warnings" FORCE)
   endif()
 endforeach()
-
-# TODO: need -pie ?
 
 macro(set_c_standard target which extensions)
   set_property(TARGET ${target} PROPERTY C_EXTENSIONS ${extensions})
@@ -182,7 +180,7 @@ macro(set_cxx_standard target which extensions)
 endmacro()
 
 function(myproj_add_exe)
-  set(options CEXTENSIONS CXXEXTENSIONS)
+  set(options CEXTENSIONS CXXEXTENSIONS NOPIE)
   set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
   set(multiValueArgs SRC LIBS INCS)
   cmake_parse_arguments(MYPROJ_ADD_EXE "${options}" "${oneValueArgs}"
@@ -201,10 +199,14 @@ function(myproj_add_exe)
                                PUBLIC ${MYPROJ_ADD_EXE_INCS})
   endif()
 
-  target_compile_definitions(${MYPROJ_ADD_EXE_TARGET} PRIVATE HAVE_CONFIG_H=1
-                                                              PIC=1)
+  target_compile_definitions(${MYPROJ_ADD_EXE_TARGET} PRIVATE HAVE_CONFIG_H=1)
 
   target_link_libraries(${MYPROJ_ADD_EXE_TARGET} ${MYPROJ_ADD_EXE_LIBS})
+
+  if(NOT MYPROJ_ADD_EXE_NOPIE)
+    set_property(TARGET ${MYPROJ_ADD_EXE_TARGET} PROPERTY
+        POSITION_INDEPENDENT_CODE ON)
+  endif()
 
   if(MYPROJ_ADD_EXE_CEXTENSIONS)
     set(exts ON)
@@ -262,7 +264,7 @@ function(myproj_add_exe)
 endfunction()
 
 function(myproj_add_shared_lib)
-  set(options CEXTENSIONS CXXEXTENSIONS)
+  set(options CEXTENSIONS CXXEXTENSIONS NOPIC)
   set(oneValueArgs
       TARGET
       VERSION
@@ -291,7 +293,7 @@ function(myproj_add_shared_lib)
   endif()
 
   target_compile_definitions(${MYPROJ_ADD_SHARED_LIB_TARGET}
-                             PRIVATE HAVE_CONFIG_H=1 PIC=1)
+                             PRIVATE HAVE_CONFIG_H=1)
 
   if(MYPROJ_ADD_SHARED_LIB_VERSION STREQUAL ""
      OR MYPROJ_ADD_SHARED_LIB_SOVERSION STREQUAL "")
@@ -307,6 +309,11 @@ function(myproj_add_shared_lib)
 
   target_link_libraries(${MYPROJ_ADD_SHARED_LIB_TARGET}
                         ${MYPROJ_ADD_SHARED_LIB_LIBS})
+
+  if(NOT MYPROJ_ADD_SHARED_LIB_NOPIC)
+    set_property(TARGET ${MYPROJ_ADD_SHARED_LIB_TARGET} PROPERTY
+        POSITION_INDEPENDENT_CODE ON)
+  endif()
 
   if(MYPROJ_ADD_SHARED_LIB_CEXTENSIONS)
     set(exts ON)
@@ -349,7 +356,7 @@ function(myproj_add_shared_lib)
     if(MYPROJ_ADD_SHARED_LIB_DESTINATION)
       set(dest ${MYPROJ_ADD_SHARED_LIB_DESTINATION})
     else()
-      set(dest bin)
+      set(dest ${MYPROJ_LIB_INSTALL_DIR})
     endif()
 
     if(MYPROJ_ADD_SHARED_LIB_EXPORT)
@@ -368,7 +375,7 @@ function(myproj_add_shared_lib)
 endfunction()
 
 function(myproj_add_module_lib)
-  set(options CEXTENSIONS CXXEXTENSIONS)
+  set(options CEXTENSIONS CXXEXTENSIONS NOPIC)
   set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
   set(multiValueArgs SRC LIBS INCS)
   cmake_parse_arguments(MYPROJ_ADD_MODULE_LIB "${options}" "${oneValueArgs}"
@@ -389,10 +396,15 @@ function(myproj_add_module_lib)
   endif()
 
   target_compile_definitions(${MYPROJ_ADD_MODULE_LIB_TARGET}
-                             PRIVATE HAVE_CONFIG_H=1 PIC=1)
+                             PRIVATE HAVE_CONFIG_H=1)
 
   target_link_libraries(${MYPROJ_ADD_MODULE_LIB_TARGET}
                         ${MYPROJ_ADD_MODULE_LIB_LIBS})
+
+  if(NOT MYPROJ_ADD_MODULE_LIB_NOPIC)
+    set_property(TARGET ${MYPROJ_ADD_MODULE_LIB_TARGET} PROPERTY
+        POSITION_INDEPENDENT_CODE ON)
+  endif()
 
   if(MYPROJ_ADD_MODULE_LIB_CEXTENSIONS)
     set(exts ON)
@@ -439,6 +451,88 @@ function(myproj_add_module_lib)
       install(TARGETS ${MYPROJ_ADD_MODULE_LIB_TARGET}
               LIBRARY DESTINATION ${dest}
                       COMPONENT ${MYPROJ_ADD_MODULE_LIB_COMPONENT})
+    endif()
+  endif()
+
+endfunction()
+
+function(myproj_add_static_lib)
+  set(options CEXTENSIONS CXXEXTENSIONS PIC)
+  set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
+  set(multiValueArgs SRC LIBS INCS)
+  cmake_parse_arguments(MYPROJ_ADD_STATIC_LIB "${options}" "${oneValueArgs}"
+                        "${multiValueArgs}" ${ARGN})
+
+  add_library(${MYPROJ_ADD_STATIC_LIB_TARGET} STATIC
+              ${MYPROJ_ADD_STATIC_LIB_SRC})
+
+  target_include_directories(
+    ${MYPROJ_ADD_STATIC_LIB_TARGET}
+    PUBLIC $<BUILD_INTERFACE:${MYPROJ_INCLUDE_PATH}>
+           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+  if(MYPROJ_ADD_STATIC_LIB_INCS)
+    target_include_directories(${MYPROJ_ADD_STATIC_LIB_TARGET}
+                               PUBLIC ${MYPROJ_ADD_STATIC_LIB_INCS})
+  endif()
+
+  target_compile_definitions(${MYPROJ_ADD_STATIC_LIB_TARGET}
+                             PRIVATE HAVE_CONFIG_H=1)
+
+  target_link_libraries(${MYPROJ_ADD_STATIC_LIB_TARGET}
+                        ${MYPROJ_ADD_STATIC_LIB_LIBS})
+
+  if(MYPROJ_ADD_STATIC_LIB_PIC)
+    set_property(TARGET ${MYPROJ_ADD_STATIC_LIB_TARGET} PROPERTY
+        POSITION_INDEPENDENT_CODE ON)
+  endif()
+
+  if(MYPROJ_ADD_STATIC_LIB_CEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_STATIC_LIB_CSTD)
+    set_c_standard(${MYPROJ_ADD_STATIC_LIB_TARGET}
+                   ${MYPROJ_ADD_STATIC_LIB_CSTD} ${exts})
+  endif()
+
+  if(MYPROJ_ADD_STATIC_LIB_CXXEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_STATIC_LIB_CXXSTD)
+    set_cxx_standard(${MYPROJ_ADD_STATIC_LIB_TARGET}
+                     ${MYPROJ_ADD_STATIC_LIB_CXXSTD} ${exts})
+  endif()
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    set_property(
+      SOURCE ${MYPROJ_ADD_STATIC_LIB_SRC}
+      APPEND_STRING
+      PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
+    target_link_libraries(${MYPROJ_ADD_STATIC_LIB_TARGET} "-l${GCOV_LIBRARY}")
+  endif()
+
+  if(MYPROJ_ADD_STATIC_LIB_COMPONENT)
+    if(MYPROJ_ADD_STATIC_LIB_DESTINATION)
+      set(dest ${MYPROJ_ADD_STATIC_LIB_DESTINATION})
+    else()
+      set(dest ${MYPROJ_LIB_INSTALL_DIR})
+    endif()
+
+    if(MYPROJ_ADD_STATIC_LIB_EXPORT)
+      install(
+        TARGETS ${MYPROJ_ADD_STATIC_LIB_TARGET}
+        EXPORT ${MYPROJ_ADD_STATIC_LIB_EXPORT}
+        ARCHIVE DESTINATION ${dest}
+                COMPONENT ${MYPROJ_ADD_STATIC_LIB_COMPONENT})
+    else()
+      install(TARGETS ${MYPROJ_ADD_STATIC_LIB_TARGET}
+              ARCHIVE DESTINATION ${dest}
+                      COMPONENT ${MYPROJ_ADD_STATIC_LIB_COMPONENT})
     endif()
   endif()
 
