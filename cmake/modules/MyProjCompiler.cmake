@@ -256,3 +256,109 @@ function(myproj_add_exe)
   endif()
 
 endfunction()
+
+function(myproj_add_shared_lib)
+  set(options CEXTENSIONS CXXEXTENSIONS)
+  set(oneValueArgs
+      TARGET
+      VERSION
+      SOVERSION
+      COMPONENT
+      DESTINATION
+      EXPORT
+      CSTD
+      CXXSTD)
+  set(multiValueArgs SRC LIBS INCS)
+  cmake_parse_arguments(MYPROJ_ADD_SHARED_LIB "${options}" "${oneValueArgs}"
+                        "${multiValueArgs}" ${ARGN})
+
+  add_library(${MYPROJ_ADD_SHARED_LIB_TARGET} SHARED
+              ${MYPROJ_ADD_SHARED_LIB_SRC})
+
+  target_include_directories(
+    ${MYPROJ_ADD_SHARED_LIB_TARGET}
+    PUBLIC $<BUILD_INTERFACE:${MYPROJ_INCLUDE_PATH}>
+           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+  if(MYPROJ_ADD_SHARED_LIB_INCS)
+    target_include_directories(${MYPROJ_ADD_SHARED_LIB_TARGET}
+                               PUBLIC ${MYPROJ_ADD_SHARED_LIB_INCS})
+  endif()
+
+  target_compile_definitions(${MYPROJ_ADD_SHARED_LIB_TARGET}
+                             PRIVATE HAVE_CONFIG_H=1 PIC=1)
+
+  if(MYPROJ_ADD_SHARED_LIB_VERSION STREQUAL ""
+     OR MYPROJ_ADD_SHARED_LIB_SOVERSION STREQUAL "")
+    message(
+      FATAL_ERROR
+        "Shared libraries must specify a version and shared-object version.")
+  endif()
+
+  set_target_properties(
+    ${MYPROJ_ADD_SHARED_LIB_TARGET}
+    PROPERTIES VERSION ${MYPROJ_ADD_SHARED_LIB_VERSION}
+               SOVERSION ${MYPROJ_ADD_SHARED_LIB_SOVERSION})
+
+  target_link_libraries(${MYPROJ_ADD_SHARED_LIB_TARGET}
+                        ${MYPROJ_ADD_SHARED_LIB_LIBS})
+
+  if(MYPROJ_ADD_SHARED_LIB_CEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_SHARED_LIB_CSTD)
+    set_c_standard(${MYPROJ_ADD_SHARED_LIB_TARGET}
+                   ${MYPROJ_ADD_SHARED_LIB_CSTD} ${exts})
+  endif()
+
+  if(MYPROJ_ADD_SHARED_LIB_CXXEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_SHARED_LIB_CXXSTD)
+    set_cxx_standard(${MYPROJ_ADD_SHARED_LIB_TARGET}
+                     ${MYPROJ_ADD_SHARED_LIB_CXXSTD} ${exts})
+  endif()
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    set_property(
+      SOURCE ${MYPROJ_ADD_SHARED_LIB_SRC}
+      APPEND_STRING
+      PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
+    target_link_libraries(${MYPROJ_ADD_SHARED_LIB_TARGET} "-l${GCOV_LIBRARY}")
+  endif()
+
+  if(MYPROJ_INSTALL_RPATH)
+    set_target_properties(
+      ${MYPROJ_ADD_SHARED_LIB_TARGET}
+      PROPERTIES INSTALL_RPATH "\$ORIGIN/../${MYPROJ_LIB_INSTALL_DIR}"
+                 INSTALL_RPATH_USE_LINK_PATH TRUE
+                 SKIP_BUILD_RPATH FALSE
+                 BUILD_WITH_INSTALL_RPATH FALSE)
+  endif()
+
+  if(MYPROJ_ADD_SHARED_LIB_COMPONENT)
+    if(MYPROJ_ADD_SHARED_LIB_DESTINATION)
+      set(dest ${MYPROJ_ADD_SHARED_LIB_DESTINATION})
+    else()
+      set(dest bin)
+    endif()
+
+    if(MYPROJ_ADD_SHARED_LIB_EXPORT)
+      install(
+        TARGETS ${MYPROJ_ADD_SHARED_LIB_TARGET}
+        EXPORT ${MYPROJ_ADD_SHARED_LIB_EXPORT}
+        RUNTIME DESTINATION ${dest}
+                COMPONENT ${MYPROJ_ADD_SHARED_LIB_COMPONENT})
+    else()
+      install(TARGETS ${MYPROJ_ADD_SHARED_LIB_TARGET}
+              RUNTIME DESTINATION ${dest}
+                      COMPONENT ${MYPROJ_ADD_SHARED_LIB_COMPONENT})
+    endif()
+  endif()
+
+endfunction()

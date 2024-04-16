@@ -19,21 +19,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#pragma once
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <iostream>
-
-#include "slib.h"
-
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  std::cout << "Hello, world!" << std::endl;
-
-  SomeClass s;
-
-  return 0;
-}
+class SomeClass {
+public:
+  SomeClass();
+};

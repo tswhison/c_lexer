@@ -20,26 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-myproj_add_exe(
+myproj_add_shared_lib(
   TARGET
-  mycxxapp
-  COMPONENT
-  mycxxapp
-  SRC
-  main.cpp
-  LIBS
   myslib
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs/shared
-  CXXSTD
-  17)
-
-myproj_add_exe(
-  TARGET
-  mycapp
   COMPONENT
-  mycapp
+  myslib
   SRC
-  main.c
-  CSTD
-  11)
+  slib.cpp
+  CXXSTD
+  17
+  VERSION
+  ${MYPROJ_VERSION}
+  SOVERSION
+  ${MYPROJ_VERSION_MAJOR})

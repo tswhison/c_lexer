@@ -27,13 +27,6 @@
 
 #include "slib.h"
 
-int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  std::cout << "Hello, world!" << std::endl;
-
-  SomeClass s;
-
-  return 0;
+SomeClass::SomeClass() {
+  std::cout << "Hello from shared library." << std::endl;
 }

@@ -196,4 +196,5 @@ if(MYPROJ_BUILD_TESTS)
 
 endif()
 
+add_subdirectory(libs)
 add_subdirectory(app)

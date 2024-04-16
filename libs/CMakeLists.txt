@@ -20,26 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-myproj_add_exe(
-  TARGET
-  mycxxapp
-  COMPONENT
-  mycxxapp
-  SRC
-  main.cpp
-  LIBS
-  myslib
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs/shared
-  CXXSTD
-  17)
-
-myproj_add_exe(
-  TARGET
-  mycapp
-  COMPONENT
-  mycapp
-  SRC
-  main.c
-  CSTD
-  11)
+add_subdirectory(shared)
