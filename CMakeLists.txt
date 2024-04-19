@@ -29,6 +29,10 @@ set(MYPROJ_INCLUDE_PATH
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     CACHE PATH "Project include directory")
 
+set(MYPROJ_TEST_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    CACHE PATH "Project tests directory")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
@@ -176,6 +180,13 @@ if(MYPROJ_BUILD_TESTS)
         TRUE
         CACHE BOOL "googletest imported from source" FORCE)
 
+  else()
+
+    find_library(GTEST_LIBRARY_DEBUG libgtestd.so)
+    find_library(GTEST_MAIN_LIBRARY_DEBUG libgtest_maind.so)
+    find_library(GTEST_LIBRARY libgtest.so)
+    find_library(GTEST_MAIN_LIBRARY libgtest_main.so)
+
   endif()
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -186,6 +197,18 @@ if(MYPROJ_BUILD_TESTS)
     set(GTEST_LIBRARIES
         ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY}
         CACHE STRING "googletest link libraries" FORCE)
+  endif()
+
+  if(NOT GTEST_LIBRARIES)
+    if(GTEST_LIBRARY_DEBUG)
+      set(GTEST_LIBRARIES
+          ${GTEST_LIBRARY_DEBUG} ${GTEST_MAIN_LIBRARY_DEBUG}
+          CACHE STRING "googletest link libraries" FORCE)
+    elseif(GTEST_LIBRARY)
+      set(GTEST_LIBRARIES
+          ${GTEST_LIBRARY} ${GTEST_MAIN_LIBRARY}
+          CACHE STRING "googletest link libraries" FORCE)
+    endif()
   endif()
 
   message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")

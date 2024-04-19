@@ -20,12 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-add_test(
-  NAME mycapp
-  COMMAND $<TARGET_FILE:mycapp>
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# add_test( NAME mycapp COMMAND $<TARGET_FILE:mycapp> WORKING_DIRECTORY
+# ${CMAKE_BINARY_DIR})
 
-add_test(
-  NAME mycxxapp
-  COMMAND $<TARGET_FILE:mycxxapp>
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# add_test( NAME mycxxapp COMMAND $<TARGET_FILE:mycxxapp> WORKING_DIRECTORY
+# ${CMAKE_BINARY_DIR})
+
+myproj_add_test(
+  TARGET
+  example_test
+  SRC
+  example_test.cpp
+  CXXSTD
+  11
+  NOPIE)
