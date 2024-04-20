@@ -20,17 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "tests.h"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-
-int myfunc(const char *name);
-
-#ifdef __cplusplus
+#include "static/arch.h"
+int mycapp_main(int argc, char *argv[]);
 }
-#endif
 
-#endif
+TEST(mycapp, Success0) {
+  int argc = 1;
+  char app[] = {'m', 'y', 'c', 'a', 'p', 'p', 0};
+  char *argv[1] = {app};
+
+  EXPECT_EQ(mycapp_main(argc, argv), 0);
+}

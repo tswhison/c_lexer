@@ -20,17 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "module/SomeConcrete.h"
+#include "tests.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+TEST(mymod, SomeConcrete0) {
+  SomeConcrete c;
 
-int myfunc(const char *name);
-
-#ifdef __cplusplus
+  EXPECT_EQ(c.method("Me"), 42);
 }
-#endif
 
-#endif
+TEST(mymod, getObject0) {
+  SomeInterface *p = getObject();
+  ASSERT_NONNULL(p);
+
+  EXPECT_EQ(p->method("George"), 42);
+  delete p;
+}

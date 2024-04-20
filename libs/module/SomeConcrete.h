@@ -19,18 +19,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#pragma once
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "mlib.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+class SomeConcrete : public SomeInterface {
+public:
+  SomeConcrete() {}
 
-int myfunc(const char *name);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+  int method(const char *name) override;
+};

@@ -59,15 +59,19 @@ int main(int argc, char *argv[]) {
   UNUSED_PARAM(argc);
   UNUSED_PARAM(argv);
 
+  int res = 0;
+
   std::cout << "Hello, world!" << std::endl;
 
   SomeClass s;
 
   SomeInterface *i = LoadModuleObject("libmymod.so");
-  if (i && i->method("Slim Shady") != 42)
+  if (i && i->method("Slim Shady") != 42) {
     std::cout << "Whoops, didn't get 42." << std::endl;
+    res = 1;
+  }
 
   UnloadModule(i);
 
-  return 0;
+  return res;
 }

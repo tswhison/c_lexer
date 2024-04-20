@@ -25,14 +25,7 @@
 #endif
 #include <iostream>
 
-#include "mlib.h"
-
-class SomeConcrete : public SomeInterface {
-public:
-  SomeConcrete() {}
-
-  int method(const char *name) override;
-};
+#include "SomeConcrete.h"
 
 int SomeConcrete::method(const char *name) {
   std::cout << "Hello, " << name << ", from the module library!" << std::endl;

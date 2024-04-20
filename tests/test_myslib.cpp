@@ -20,17 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "shared/slib.h"
+#include "tests.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int myfunc(const char *name);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+TEST(myslib, SomeClass0) { SomeClass s; }

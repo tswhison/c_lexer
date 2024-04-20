@@ -20,17 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "shared/slib.h"
+#include "tests.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+int mycxxapp_main(int argc, char *argv[]);
 
-int myfunc(const char *name);
+TEST(mycxxapp, Success0) {
+  int argc = 1;
+  char app[] = {'m', 'y', 'c', 'x', 'x', 'a', 'p', 'p', 0};
+  char *argv[1] = {app};
 
-#ifdef __cplusplus
+  EXPECT_EQ(mycxxapp_main(argc, argv), 0);
 }
-#endif
-
-#endif

@@ -182,11 +182,11 @@ endmacro()
 function(myproj_add_exe)
   set(options CEXTENSIONS CXXEXTENSIONS NOPIE)
   set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
-  set(multiValueArgs SRC LIBS INCS)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
   cmake_parse_arguments(MYPROJ_ADD_EXE "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
-  add_executable(${MYPROJ_ADD_EXE_TARGET} ${MYPROJ_ADD_EXE_SRC})
+  add_executable(${MYPROJ_ADD_EXE_TARGET} ${MYPROJ_ADD_EXE_SRCS})
 
   target_include_directories(
     ${MYPROJ_ADD_EXE_TARGET}
@@ -199,7 +199,9 @@ function(myproj_add_exe)
                                PUBLIC ${MYPROJ_ADD_EXE_INCS})
   endif()
 
-  target_compile_definitions(${MYPROJ_ADD_EXE_TARGET} PRIVATE HAVE_CONFIG_H=1)
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 ${MYPROJ_ADD_EXE_DEFS})
+  target_compile_definitions(${MYPROJ_ADD_EXE_TARGET}
+                               PRIVATE ${MYPROJ_DEFS})
 
   target_link_libraries(${MYPROJ_ADD_EXE_TARGET} ${MYPROJ_ADD_EXE_LIBS})
 
@@ -231,7 +233,7 @@ function(myproj_add_exe)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
     set_property(
-      SOURCE ${MYPROJ_ADD_EXE_SRC}
+      SOURCE ${MYPROJ_ADD_EXE_SRCS}
       APPEND_STRING
       PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
     target_link_libraries(${MYPROJ_ADD_EXE_TARGET} "-l${GCOV_LIBRARY}")
@@ -277,12 +279,12 @@ function(myproj_add_shared_lib)
       EXPORT
       CSTD
       CXXSTD)
-  set(multiValueArgs SRC LIBS INCS)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
   cmake_parse_arguments(MYPROJ_ADD_SHARED_LIB "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
   add_library(${MYPROJ_ADD_SHARED_LIB_TARGET} SHARED
-              ${MYPROJ_ADD_SHARED_LIB_SRC})
+              ${MYPROJ_ADD_SHARED_LIB_SRCS})
 
   target_include_directories(
     ${MYPROJ_ADD_SHARED_LIB_TARGET}
@@ -295,8 +297,9 @@ function(myproj_add_shared_lib)
                                PUBLIC ${MYPROJ_ADD_SHARED_LIB_INCS})
   endif()
 
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 ${MYPROJ_ADD_SHARED_LIB_DEFS})
   target_compile_definitions(${MYPROJ_ADD_SHARED_LIB_TARGET}
-                             PRIVATE HAVE_CONFIG_H=1)
+                               PRIVATE ${MYPROJ_DEFS})
 
   if(MYPROJ_ADD_SHARED_LIB_VERSION STREQUAL ""
      OR MYPROJ_ADD_SHARED_LIB_SOVERSION STREQUAL "")
@@ -343,7 +346,7 @@ function(myproj_add_shared_lib)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
     set_property(
-      SOURCE ${MYPROJ_ADD_SHARED_LIB_SRC}
+      SOURCE ${MYPROJ_ADD_SHARED_LIB_SRCS}
       APPEND_STRING
       PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
     target_link_libraries(${MYPROJ_ADD_SHARED_LIB_TARGET} "-l${GCOV_LIBRARY}")
@@ -383,12 +386,12 @@ endfunction()
 function(myproj_add_module_lib)
   set(options CEXTENSIONS CXXEXTENSIONS NOPIC)
   set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
-  set(multiValueArgs SRC LIBS INCS)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
   cmake_parse_arguments(MYPROJ_ADD_MODULE_LIB "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
   add_library(${MYPROJ_ADD_MODULE_LIB_TARGET} MODULE
-              ${MYPROJ_ADD_MODULE_LIB_SRC})
+              ${MYPROJ_ADD_MODULE_LIB_SRCS})
 
   target_include_directories(
     ${MYPROJ_ADD_MODULE_LIB_TARGET}
@@ -401,8 +404,9 @@ function(myproj_add_module_lib)
                                PUBLIC ${MYPROJ_ADD_MODULE_LIB_INCS})
   endif()
 
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 ${MYPROJ_ADD_MODULE_LIB_DEFS})
   target_compile_definitions(${MYPROJ_ADD_MODULE_LIB_TARGET}
-                             PRIVATE HAVE_CONFIG_H=1)
+                               PRIVATE ${MYPROJ_DEFS})
 
   target_link_libraries(${MYPROJ_ADD_MODULE_LIB_TARGET}
                         ${MYPROJ_ADD_MODULE_LIB_LIBS})
@@ -437,7 +441,7 @@ function(myproj_add_module_lib)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
     set_property(
-      SOURCE ${MYPROJ_ADD_MODULE_LIB_SRC}
+      SOURCE ${MYPROJ_ADD_MODULE_LIB_SRCS}
       APPEND_STRING
       PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
     target_link_libraries(${MYPROJ_ADD_MODULE_LIB_TARGET} "-l${GCOV_LIBRARY}")
@@ -468,12 +472,12 @@ endfunction()
 function(myproj_add_static_lib)
   set(options CEXTENSIONS CXXEXTENSIONS PIC)
   set(oneValueArgs TARGET COMPONENT DESTINATION EXPORT CSTD CXXSTD)
-  set(multiValueArgs SRC LIBS INCS)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
   cmake_parse_arguments(MYPROJ_ADD_STATIC_LIB "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
   add_library(${MYPROJ_ADD_STATIC_LIB_TARGET} STATIC
-              ${MYPROJ_ADD_STATIC_LIB_SRC})
+              ${MYPROJ_ADD_STATIC_LIB_SRCS})
 
   target_include_directories(
     ${MYPROJ_ADD_STATIC_LIB_TARGET}
@@ -486,8 +490,9 @@ function(myproj_add_static_lib)
                                PUBLIC ${MYPROJ_ADD_STATIC_LIB_INCS})
   endif()
 
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 ${MYPROJ_ADD_STATIC_LIB_DEFS})
   target_compile_definitions(${MYPROJ_ADD_STATIC_LIB_TARGET}
-                             PRIVATE HAVE_CONFIG_H=1)
+                               PRIVATE ${MYPROJ_DEFS})
 
   target_link_libraries(${MYPROJ_ADD_STATIC_LIB_TARGET}
                         ${MYPROJ_ADD_STATIC_LIB_LIBS})
@@ -522,7 +527,7 @@ function(myproj_add_static_lib)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
     set_property(
-      SOURCE ${MYPROJ_ADD_STATIC_LIB_SRC}
+      SOURCE ${MYPROJ_ADD_STATIC_LIB_SRCS}
       APPEND_STRING
       PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
     target_link_libraries(${MYPROJ_ADD_STATIC_LIB_TARGET} "-l${GCOV_LIBRARY}")
@@ -553,12 +558,12 @@ endfunction()
 function(myproj_add_test)
   set(options CEXTENSIONS CXXEXTENSIONS NOPIE)
   set(oneValueArgs TARGET CSTD CXXSTD)
-  set(multiValueArgs SRC LIBS INCS)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
   cmake_parse_arguments(MYPROJ_ADD_TEST "${options}" "${oneValueArgs}"
                         "${multiValueArgs}" ${ARGN})
 
   add_executable(${MYPROJ_ADD_TEST_TARGET}
-    ${MYPROJ_ADD_TEST_SRC}
+    ${MYPROJ_ADD_TEST_SRCS}
     ${MYPROJ_TEST_DIR}/tests.cpp)
 
   target_include_directories(
@@ -574,7 +579,8 @@ function(myproj_add_test)
                                PUBLIC ${MYPROJ_ADD_TEST_INCS})
   endif()
 
-  target_compile_definitions(${MYPROJ_ADD_TEST_TARGET} PRIVATE HAVE_CONFIG_H=1)
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 STATIC= ${MYPROJ_ADD_TEST_DEFS})
+  target_compile_definitions(${MYPROJ_ADD_TEST_TARGET} PRIVATE ${MYPROJ_DEFS})
 
   target_link_libraries(${MYPROJ_ADD_TEST_TARGET}
       ${MYPROJ_ADD_TEST_LIBS}
@@ -608,7 +614,7 @@ function(myproj_add_test)
 
   if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
     set_property(
-      SOURCE ${MYPROJ_ADD_TEST_SRC}
+      SOURCE ${MYPROJ_ADD_TEST_SRCS}
       APPEND_STRING
       PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
     target_link_libraries(${MYPROJ_ADD_TEST_TARGET} "-l${GCOV_LIBRARY}")
@@ -619,5 +625,76 @@ function(myproj_add_test)
     COMMAND $<TARGET_FILE:${MYPROJ_ADD_TEST_TARGET}>
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
+
+endfunction()
+
+function(myproj_add_test_lib)
+  set(options CEXTENSIONS CXXEXTENSIONS PIC)
+  set(oneValueArgs TARGET CSTD CXXSTD)
+  set(multiValueArgs SRCS LIBS INCS DEFS)
+  cmake_parse_arguments(MYPROJ_ADD_TEST_LIB "${options}" "${oneValueArgs}"
+                        "${multiValueArgs}" ${ARGN})
+
+  add_library(${MYPROJ_ADD_TEST_LIB_TARGET} STATIC
+              ${MYPROJ_ADD_TEST_LIB_SRCS})
+
+  target_include_directories(
+    ${MYPROJ_ADD_TEST_LIB_TARGET}
+    PUBLIC
+           $<BUILD_INTERFACE:${MYPROJ_INCLUDE_PATH}>
+           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+  foreach(_src ${MYPROJ_ADD_TEST_LIB_SRCS})
+    get_filename_component(_dir ${_src} DIRECTORY)
+    target_include_directories(${MYPROJ_ADD_TEST_LIB_TARGET}
+      PRIVATE ${_dir})
+  endforeach()
+
+  if(MYPROJ_ADD_TEST_LIB_INCS)
+    target_include_directories(${MYPROJ_ADD_TEST_LIB_TARGET}
+                               PUBLIC ${MYPROJ_ADD_TEST_LIB_INCS})
+  endif()
+
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 STATIC= ${MYPROJ_ADD_TEST_LIB_DEFS})
+  target_compile_definitions(${MYPROJ_ADD_TEST_LIB_TARGET}
+    PRIVATE ${MYPROJ_DEFS})
+
+  target_link_libraries(${MYPROJ_ADD_TEST_LIB_TARGET}
+      ${MYPROJ_ADD_TEST_LIB_LIBS})
+
+  if(MYPROJ_ADD_TEST_LIB_PIC)
+    set(MYPROJ_PIC ON)
+  else()
+    set(MYPROJ_PIC OFF)
+  endif()
+  set_property(TARGET ${MYPROJ_ADD_TEST_LIB_TARGET}
+    PROPERTY POSITION_INDEPENDENT_CODE ${MYPROJ_PIC})
+
+  if(MYPROJ_ADD_TEST_LIB_CEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_TEST_LIB_CSTD)
+    set_c_standard(${MYPROJ_ADD_TEST_LIB_TARGET} ${MYPROJ_ADD_TEST_LIB_CSTD} ${exts})
+  endif()
+
+  if(MYPROJ_ADD_TEST_LIB_CXXEXTENSIONS)
+    set(exts ON)
+  else()
+    set(exts OFF)
+  endif()
+  if(MYPROJ_ADD_TEST_LIB_CXXSTD)
+    set_cxx_standard(${MYPROJ_ADD_TEST_LIB_TARGET} ${MYPROJ_ADD_TEST_LIB_CXXSTD} ${exts})
+  endif()
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    set_property(
+      SOURCE ${MYPROJ_ADD_TEST_LIB_SRCS}
+      APPEND_STRING
+      PROPERTY COMPILE_FLAGS "${GCOV_CFLAGS}")
+    target_link_libraries(${MYPROJ_ADD_TEST_LIB_TARGET} "-l${GCOV_LIBRARY}")
+  endif()
 
 endfunction()

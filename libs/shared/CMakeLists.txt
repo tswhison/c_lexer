@@ -25,7 +25,7 @@ myproj_add_shared_lib(
   myslib
   COMPONENT
   myslib
-  SRC
+  SRCS
   slib.cpp
   CXXSTD
   17

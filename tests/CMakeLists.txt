@@ -20,17 +20,103 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# add_test( NAME mycapp COMMAND $<TARGET_FILE:mycapp> WORKING_DIRECTORY
-# ${CMAKE_BINARY_DIR})
+myproj_add_test(TARGET example_test SRCS example_test.cpp CXXSTD 11)
 
-# add_test( NAME mycxxapp COMMAND $<TARGET_FILE:mycxxapp> WORKING_DIRECTORY
-# ${CMAKE_BINARY_DIR})
+# mycapp tests
+myproj_add_test_lib(TARGET myarch-static SRCS
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/static/arch.c CSTD 11)
+
+myproj_add_test_lib(
+  TARGET
+  mycapp-static
+  SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../app/main.c
+  INCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  LIBS
+  myarch-static
+  DEFS
+  main=mycapp_main
+  CSTD
+  11)
 
 myproj_add_test(
   TARGET
-  example_test
-  SRC
-  example_test.cpp
+  test_myarch
+  SRCS
+  test_myarch.cpp
+  INCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  LIBS
+  myarch-static
   CXXSTD
-  11
-  NOPIE)
+  17)
+
+myproj_add_test(
+  TARGET
+  test_mycapp
+  SRCS
+  test_mycapp.cpp
+  LIBS
+  myarch-static
+  mycapp-static
+  CXXSTD
+  17)
+
+# mycxxapp tests
+myproj_add_test_lib(
+  TARGET myslib-static SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/shared/slib.cpp
+  CXXSTD 17)
+
+myproj_add_test_lib(
+  TARGET mymod-static SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/module/mlib.cpp
+  CXXSTD 17)
+
+myproj_add_test_lib(
+  TARGET
+  mycxxapp-static
+  SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../app/main.cpp
+  INCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  LIBS
+  myslib-static
+  DEFS
+  main=mycxxapp_main
+  CXXSTD
+  17)
+
+myproj_add_test(
+  TARGET
+  test_myslib
+  SRCS
+  test_myslib.cpp
+  INCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  LIBS
+  myslib-static
+  CXXSTD
+  17)
+
+myproj_add_test(
+  TARGET
+  test_mymod
+  SRCS
+  test_mymod.cpp
+  INCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
+  LIBS
+  mymod-static
+  CXXSTD
+  17)
+
+myproj_add_test(
+  TARGET
+  test_mycxxapp
+  SRCS
+  test_mycxxapp.cpp
+  LIBS
+  myslib-static
+  mycxxapp-static
+  CXXSTD
+  17)

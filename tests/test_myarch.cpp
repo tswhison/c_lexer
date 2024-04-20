@@ -20,17 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef __ARCH_H__
-#define __ARCH_H__
+#include "tests.h"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-
-int myfunc(const char *name);
-
-#ifdef __cplusplus
+#include "static/arch.h"
 }
-#endif
 
-#endif
+TEST(myarch, MyFunc0) { EXPECT_EQ(myfunc("Sally"), 42); }

@@ -32,8 +32,10 @@ int main(int argc, char *argv[]) {
   UNUSED_PARAM(argv);
 
   printf("Hello, world!\n");
-  if (myfunc("Bigfoot") != 42)
+  if (myfunc("Bigfoot") != 42) {
     printf("Whoops! Expected 42.\n");
+    return 1;
+  }
 
   return 0;
 }

@@ -25,7 +25,7 @@ myproj_add_static_lib(
   myarch
   COMPONENT
   myarch
-  SRC
+  SRCS
   arch.c
   CSTD
   11)

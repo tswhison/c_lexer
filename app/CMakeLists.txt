@@ -25,7 +25,7 @@ myproj_add_exe(
   mycxxapp
   COMPONENT
   mycxxapp
-  SRC
+  SRCS
   main.cpp
   LIBS
   myslib
@@ -40,7 +40,7 @@ myproj_add_exe(
   mycapp
   COMPONENT
   mycapp
-  SRC
+  SRCS
   main.c
   LIBS
   myarch

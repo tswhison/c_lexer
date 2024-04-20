@@ -25,7 +25,7 @@ myproj_add_module_lib(
   mymod
   COMPONENT
   mymod
-  SRC
+  SRCS
   mlib.cpp
   CXXSTD
   17)
