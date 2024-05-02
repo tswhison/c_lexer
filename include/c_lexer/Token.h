@@ -78,10 +78,9 @@ enum Token {
   TKN_SEMI,     // ;
 
   TKN_IDENTIFIER,
-  TKN_INTEGER_LIT, // 123  0xbeef
+  TKN_INTEGER_LIT, // 123  0xbeef '\n'
   TKN_FLOAT_LIT,   // 3.14
   TKN_STRING_LIT,  // "abc"
-  TKN_CHAR_LIT,    // 'x'
 
   TKN_ALIGNAS,        // alignas (C23)
   TKN_ALIGNOF,        // alignof (C23)

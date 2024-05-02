@@ -34,15 +34,13 @@ int main(int argc, char *argv[]) {
 
   SourceReader *reader = new SourceReader(in);
 
-  Lexer l(reader);
+  Lexer lexer(reader);
 
-  while (std::get<0>(l.peek()) != TKN_EOF) {
-    Lexer::item_t i = l.eat();
-    enum Token t = std::get<0>(i);
-    Lexeme l = std::move(std::get<1>(i));
+  while (lexer.peek() != TKN_EOF) {
+    Lexeme lexeme = lexer.eat();
 
-    std::cout << l.lexeme_ << " (" << l.row_ << "," << l.col_
-              << ") : " << ttos[t] << '\n';
+    std::cout << lexeme.lexeme_ << " (" << lexeme.row_ << "," << lexeme.col_
+              << ") : " << ttos[lexeme.token()] << '\n';
   }
 
   delete reader;

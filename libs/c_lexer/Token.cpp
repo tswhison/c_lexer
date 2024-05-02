@@ -79,10 +79,9 @@ const char *ttos[TKN_INVALID + 1] = {
     s(TKN_SEMI),     // ;
 
     s(TKN_IDENTIFIER),
-    s(TKN_INTEGER_LIT), // 123  0xbeef
+    s(TKN_INTEGER_LIT), // 123  0xbeef '\n'
     s(TKN_FLOAT_LIT),   // 3.14
     s(TKN_STRING_LIT),  // "abc"
-    s(TKN_CHAR_LIT),    // 'x'
 
     s(TKN_ALIGNAS),        // alignas (C23)
     s(TKN_ALIGNOF),        // alignof (C23)

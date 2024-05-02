@@ -27,14 +27,23 @@
 #include <utility>
 #include <vector>
 
-#include "Token.h"
+#include <c_lexer/Token.h>
 
 class Lexeme {
 public:
-  Lexeme(std::string &&lexeme, std::uint32_t row, std::uint32_t col)
-      : lexeme_(std::move(lexeme)), row_(row), col_(col) {}
+  Lexeme(std::string &&lexeme, enum Token token, std::uint32_t row,
+         std::uint32_t col)
+      : lexeme_(std::move(lexeme)), token_(token), row_(row), col_(col) {}
+
+  Lexeme(const Lexeme &) = default;
+  Lexeme(Lexeme &&) noexcept = default;
+  Lexeme &operator=(Lexeme &&) noexcept = default;
+
+  enum Token token() const { return token_; }
+  operator enum Token() const { return token_; }
 
   std::string lexeme_;
+  enum Token token_;
   std::uint32_t row_;
   std::uint32_t col_;
 };
@@ -54,22 +63,18 @@ protected:
 
 class Lexer {
 public:
-  typedef std::tuple<enum Token, Lexeme> item_t;
-
   explicit Lexer(SourceReader *sr);
 
-  item_t peek();
-  item_t eat();
+  Lexeme peek();
+  Lexeme eat();
 
 protected:
-  item_t scan_token();
-  bool scan_if(std::string *s);
-  bool scan_else(std::string *s);
-  bool scan_identifier(std::string *s);
-  bool scan_integer(std::string *s);
+  Lexeme scan_token();
 
   SourceReader *sr_;
   std::uint32_t row_;
   std::uint32_t col_;
-  std::vector<item_t> lookahead_;
+  std::vector<Lexeme> lookahead_;
 };
+
+std::vector<Lexeme> scan_tokens(const char *s);
