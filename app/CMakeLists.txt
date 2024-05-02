@@ -22,29 +22,14 @@
 
 myproj_add_exe(
   TARGET
-  mycxxapp
+  c_lexview
   COMPONENT
-  mycxxapp
+  c_lexview
   SRCS
   main.cpp
   LIBS
-  myslib
-  ${CMAKE_DL_LIBS}
+  c_lexer
   INCS
   ${CMAKE_CURRENT_SOURCE_DIR}/../libs
   CXXSTD
   17)
-
-myproj_add_exe(
-  TARGET
-  mycapp
-  COMPONENT
-  mycapp
-  SRCS
-  main.c
-  LIBS
-  myarch
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  CSTD
-  11)

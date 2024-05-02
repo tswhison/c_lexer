@@ -20,12 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-myproj_add_static_lib(
+myproj_add_shared_lib(
   TARGET
-  myarch
+  c_lexer
   COMPONENT
-  myarch
+  c_lexer
   SRCS
-  arch.c
-  CSTD
-  11)
+  Token.cpp
+  Lexer.cpp
+  CXXSTD
+  17
+  VERSION
+  ${MYPROJ_VERSION}
+  SOVERSION
+  ${MYPROJ_VERSION_MAJOR})

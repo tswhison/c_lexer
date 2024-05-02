@@ -22,7 +22,7 @@
 
 cmake_minimum_required(VERSION 3.14)
 # FIXME: rename the project.
-project(myproj C CXX)
+project(c_lexer C CXX)
 
 # FIXME: global search/replace of MYPROJ.
 set(MYPROJ_INCLUDE_PATH
@@ -110,7 +110,7 @@ set(GTEST_VERSION
     1.11.0
     CACHE STRING "Version for googletest")
 set(GTEST_TAG
-    v${GEST_VERSION}
+    release-${GTEST_VERSION}
     CACHE STRING "Tag for googletest")
 
 FetchContent_Declare(

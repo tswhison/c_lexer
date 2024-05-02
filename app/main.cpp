@@ -20,58 +20,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <dlfcn.h>
+#include <fstream>
 
-#include <iostream>
-
-#include "module/mlib.h"
-#include "shared/slib.h"
-
-void *dlhandle;
-
-SomeInterface *LoadModuleObject(const char *lib) {
-  dlhandle = dlopen(lib, RTLD_LAZY | RTLD_LOCAL);
-  if (!dlhandle)
-    return nullptr;
-
-  void *fn = dlsym(dlhandle, "getObject");
-  if (!fn)
-    return nullptr;
-
-  SomeInterface *(*getobj)() = reinterpret_cast<SomeInterface *(*)()>(fn);
-
-  return getobj ? getobj() : nullptr;
-}
-
-void UnloadModule(SomeInterface *p) {
-  if (p)
-    delete p;
-  if (dlhandle) {
-    dlclose(dlhandle);
-    dlhandle = nullptr;
-  }
-}
+#include <c_lexer/Lexer.h>
 
 int main(int argc, char *argv[]) {
-  UNUSED_PARAM(argc);
-  UNUSED_PARAM(argv);
-
-  int res = 0;
-
-  std::cout << "Hello, world!" << std::endl;
-
-  SomeClass s;
-
-  SomeInterface *i = LoadModuleObject("libmymod.so");
-  if (i && i->method("Slim Shady") != 42) {
-    std::cout << "Whoops, didn't get 42." << std::endl;
-    res = 1;
+  std::ifstream f;
+  if (argc > 1) {
+    f.open(argv[1]);
   }
 
-  UnloadModule(i);
+  std::istream &in = f.is_open() ? f : std::cin;
 
-  return res;
+  SourceReader *reader = new SourceReader(in);
+
+  Lexer l(reader);
+
+  while (std::get<0>(l.peek()) != TKN_EOF) {
+    Lexer::item_t i = l.eat();
+    enum Token t = std::get<0>(i);
+    Lexeme l = std::move(std::get<1>(i));
+
+    std::cout << l.lexeme_ << " (" << l.row_ << "," << l.col_
+              << ") : " << ttos[t] << '\n';
+  }
+
+  delete reader;
+
+  if (f.is_open())
+    f.close();
+
+  return 0;
 }
