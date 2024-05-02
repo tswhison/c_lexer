@@ -22,101 +22,35 @@
 
 myproj_add_test(TARGET example_test SRCS example_test.cpp CXXSTD 11)
 
-# mycapp tests
-myproj_add_test_lib(TARGET myarch-static SRCS
-                    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/static/arch.c CSTD 11)
-
 myproj_add_test_lib(
   TARGET
-  mycapp-static
+  c_lexer-static
   SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../app/main.c
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  LIBS
-  myarch-static
-  DEFS
-  main=mycapp_main
-  CSTD
-  11)
-
-myproj_add_test(
-  TARGET
-  test_myarch
-  SRCS
-  test_myarch.cpp
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  LIBS
-  myarch-static
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs/c_lexer/Token.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../libs/c_lexer/Lexer.cpp
   CXXSTD
   17)
 
 myproj_add_test(
   TARGET
-  test_mycapp
+  test_Token
   SRCS
-  test_mycapp.cpp
-  LIBS
-  myarch-static
-  mycapp-static
-  CXXSTD
-  17)
-
-# mycxxapp tests
-myproj_add_test_lib(
-  TARGET myslib-static SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/shared/slib.cpp
-  CXXSTD 17)
-
-myproj_add_test_lib(
-  TARGET mymod-static SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/module/mlib.cpp
-  CXXSTD 17)
-
-myproj_add_test_lib(
-  TARGET
-  mycxxapp-static
-  SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../app/main.cpp
+  test_Token.cpp
   INCS
   ${CMAKE_CURRENT_SOURCE_DIR}/../libs
   LIBS
-  myslib-static
-  DEFS
-  main=mycxxapp_main
+  c_lexer-static
   CXXSTD
   17)
 
 myproj_add_test(
   TARGET
-  test_myslib
+  test_Lexer
   SRCS
-  test_myslib.cpp
+  test_Lexer.cpp
   INCS
   ${CMAKE_CURRENT_SOURCE_DIR}/../libs
   LIBS
-  myslib-static
-  CXXSTD
-  17)
-
-myproj_add_test(
-  TARGET
-  test_mymod
-  SRCS
-  test_mymod.cpp
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  LIBS
-  mymod-static
-  CXXSTD
-  17)
-
-myproj_add_test(
-  TARGET
-  test_mycxxapp
-  SRCS
-  test_mycxxapp.cpp
-  LIBS
-  myslib-static
-  mycxxapp-static
+  c_lexer-static
   CXXSTD
   17)

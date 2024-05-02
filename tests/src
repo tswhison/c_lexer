@@ -13,4 +13,127 @@
 > >= >> >>=
 < <= << <<=
 
-auto
+auto autr
+alignof alignoo alignaa alignas
+boolean bool
+break breaki
+casei case
+chari char
+const consta
+conste constexpr
+continue continew
+default1 default
+do d
+dou double doubl doublee
+els else elsee
+enum enuv
+exter extern externa
+fals false falsey
+float
+for
+goto
+if
+inline
+int
+long
+nullptr
+register
+restrict
+return
+short
+signed
+sizeof
+static
+static_assert
+struct
+switch
+thread_local
+true
+typedef
+typeof
+typeof_unqual
+union
+unsigned
+void
+volatile
+while
+_Alignas
+_Alignof
+_Atomic
+_BitInt
+_Bool
+_Complex
+_Decimal128
+_Decimal32
+_Decimal64
+_Generic
+_Imaginary
+_Noreturn
+_Static_assert
+_Thread_local
+0xbeef
+0xau 0xaul 0xauL 0xaull 0xauLL
+0xaU 0xaUl 0xaUL 0xaUll 0xaULL
+0xal 0xalu 0xalU
+0xaL 0xaLu 0xaLU
+0xall 0xallu 0xallU
+0xaLL 0xaLLu 0xaLLU
+0xax
+0xaux 0xaulx 0xauLx 0xaullx 0xauLLx
+0xaUx 0xaUlx 0xaULx 0xaUllx 0xaULLx
+0xalx 0xalux 0xalUx
+0xaLx 0xaLux 0xaLUx
+0xallx 0xallux 0xallUx
+0xaLLx 0xaLLux 0xaLLUx
+0
+1 2 3 4 5 6 7 8 9
+0u 0ul 0uL 0ull 0uLL
+0U 0Ul 0UL 0Ull 0ULL
+0l 0lu 0lU
+0L 0Lu 0LU
+0ll 0llu 0llU
+0LL 0LLu 0LLU
+1u 1ul 1uL 1ull 1uLL
+1U 1Ul 1UL 1Ull 1ULL
+1l 1lu 1lU
+1L 1Lu 1LU
+1ll 1llu 1llU
+1LL 1LLu 1LLU
+0777
+0777u 0777ul 0777uL 0777ull 0777uLL
+0777U 0777Ul 0777UL 0777Ull 0777ULL
+0777l 0777lu 0777lU
+0777L 0777Lu 0777LU
+0777ll 0777llu 0777llU
+0777LL 0777LLu 0777LLU
+'a' u'a' u8'a' U'a' L'a'
+'\'' '\"' '\?' '\\'
+'\a' '\b' '\f' '\n' '\r' '\t' '\v'
+u'\a' u8'\b' U'\f' L'\n' u'\r' u8'\t' U'\v'
+'\7' u'\77' U'\777' L'\777a'
+'\xa' u'\xab' u8'\xabc' U'\xabcd'
+' '
+0e1 0e-1 0E+1
+0e-1f 0E-1F 0e+1l 12e-06L
+0e-1df 0E-1dd 0e+1dl 0e-1DF 0E-1DD 0e+1DL
+11e1 11e-5
+11e1f 11e-5F 11e1l 11e-5L 11e1df 11e-5dd 11e1dl 11e1DF 11e-5DD 11e1DL
+.11
+.11f .11F .11l .11L .11df .11dd .11dl .11DF .11DD .11DL
+.11e1f .11e-5F .11e1l .11e-5L .11e1df .11e-5dd .11e1dl .11e1DF .11e-5DD .11e1DL
+3.11
+3.11f 3.11F 3.11l 3.11L 3.11df 3.11dd 3.11dl 3.11DF 3.11DD 3.11DL
+3.11e1f 3.11e-5F 3.11e1l 3.11e-5L 3.11e1df 3.11e-5dd 3.11e1dl 3.11e1DF 3.11e-5DD 3.11e1DL
+0.
+12.
+12.e5 12.E+5dl 34.e-05L 67543.E6
+0.E1dd
+0.0e-1 0.01E+1
+0.0e-1f 0.0E-1F 0.0e+1l 12.0e-06L
+0.0e-1df 0.0E-1dd 0.0e+1dl 0.0e-1DF 0.0E-1DD 0.0e+1DL
+
+0.0e-1dL
+0.0e-1Df
+0.0e+
+0.0e-
+0.0e

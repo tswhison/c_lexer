@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "shared/slib.h"
 #include "tests.h"
+#include <c_lexer/Lexer.h>
 
-TEST(myslib, SomeClass0) { SomeClass s; }
+TEST(lex, test0) { EXPECT_EQ(0, 1 - 1); }

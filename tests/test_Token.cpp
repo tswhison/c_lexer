@@ -20,19 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "module/SomeConcrete.h"
 #include "tests.h"
+#include <c_lexer/Token.h>
 
-TEST(mymod, SomeConcrete0) {
-  SomeConcrete c;
-
-  EXPECT_EQ(c.method("Me"), 42);
-}
-
-TEST(mymod, getObject0) {
-  SomeInterface *p = getObject();
-  ASSERT_NONNULL(p);
-
-  EXPECT_EQ(p->method("George"), 42);
-  delete p;
-}
+TEST(tok, test0) { EXPECT_EQ(0, 1 - 1); }
