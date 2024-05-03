@@ -68,8 +68,20 @@ public:
   Lexeme peek();
   Lexeme eat();
 
+  template <typename... Args>
+  std::ostream &print_error(std::ostream &os, Args... args) {
+    return printer(os, "c_lexer[", row_, ',', col_, "]: ", args...);
+  }
+
 protected:
   Lexeme scan_token();
+
+  template <typename... Args>
+  std::ostream &printer(std::ostream &os, Args... args) {
+    auto tmp = {(os << args, 0)...};
+    (void)tmp;
+    return os;
+  }
 
   SourceReader *sr_;
   std::uint32_t row_;

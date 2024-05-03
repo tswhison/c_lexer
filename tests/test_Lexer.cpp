@@ -22,6 +22,7 @@
 
 #include "gtest/gtest.h"
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -405,3 +406,210 @@ TEST_P(IntegerIdentFixture, intidenttest) {
 
 INSTANTIATE_TEST_SUITE_P(my, IntegerIdentFixture,
                          ::testing::ValuesIn(integer_ident));
+
+void float_literal_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
+  EXPECT_EQ(TKN_FLOAT_LIT, v[0]);
+  EXPECT_STREQ(v[0].lexeme_.c_str(), src);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+}
+
+class FloatLiteralFixture : public ::testing::TestWithParam<const char *> {};
+
+const char *floats[] = {
+    "0e1",       "0e-1",      "0E+1",     "0e-1f",    "0E-1F",     "0e+1l",
+    "12e-06L",   "0e-1df",    "0E-1dd",   "0e+1dl",   "0e-1DF",    "0E-1DD",
+    "0e+1DL",    "11e1",      "11e-5",    "11e1f",    "11e-5F",    "11e1l",
+    "11e-5L",    "11e1df",    "11e-5dd",  "11e1dl",   "11e1DF",    "11e-5DD",
+    "11e1DL",
+
+    ".11",       ".11f",      ".11F",     ".11l",     ".11L",      ".11df",
+    ".11dd",     ".11dl",     ".11DF",    ".11DD",    ".11DL",     ".11e1f",
+    ".11e-5F",   ".11e1l",    ".11e-5L",  ".11e1df",  ".11e-5dd",  ".11e1dl",
+    ".11e1DF",   ".11e-5DD",  ".11e1DL",
+
+    "3.11",      "3.11f",     "3.11F",    "3.11l",    "3.11L",     "3.11df",
+    "3.11dd",    "3.11dl",    "3.11DF",   "3.11DD",   "3.11DL",    "3.11e1f",
+    "3.11e-5F",  "3.11e1l",   "3.11e-5L", "3.11e1df", "3.11e-5dd", "3.11e1dl",
+    "3.11e1DF",  "3.11e-5DD", "3.11e1DL",
+
+    "0.",        "12.",       "12.e5",    "12.E+5dl", "34.e-05L",  "67543.E6",
+    "0.E1dd",    "0.0e-1",    "0.01E+1",  "0.0e-1f",  "0.0E-1F",   "0.0e+1l",
+    "12.0e-06L", "0.0e-1df",  "0.0E-1dd", "0.0e+1dl", "0.0e-1DF",  "0.0E-1DD",
+    "0.0e+1DL",
+};
+
+TEST_P(FloatLiteralFixture, floattest) {
+  ASSERT_NO_FATAL_FAILURE(float_literal_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, FloatLiteralFixture, ::testing::ValuesIn(floats));
+
+void neg_float_literal_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+
+  if (v.size() == 3) {
+    std::string f(src);
+    f = f.substr(0, f.length() - 1);
+
+    EXPECT_STREQ(v[0].lexeme_.c_str(), f.c_str());
+
+    std::string i(src);
+    i = i.substr(i.length() - 1, 1);
+
+    EXPECT_EQ(TKN_IDENTIFIER, v[1]);
+    EXPECT_STREQ(v[1].lexeme_.c_str(), i.c_str());
+
+    EXPECT_EQ(TKN_EOF, v[2]);
+  } else {
+    EXPECT_EQ(TKN_EOF, v[1]);
+  }
+}
+
+class NegFloatLiteralFixture : public ::testing::TestWithParam<const char *> {};
+
+const char *negative_floats[] = {
+    "0.0e-1dL", // suffix mismatch: dL should be DL or dl.
+    "0.0e-1Df", // suffix mismatch: Df should be DF or df.
+    "0.0e+",    // exponent missing power digit(s)
+    "0.0e-",    // exponent missing power digit(s)
+    "0.0e",     // exponent missing power digit(s)
+};
+
+TEST_P(NegFloatLiteralFixture, negfloattest) {
+  ASSERT_NO_FATAL_FAILURE(neg_float_literal_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, NegFloatLiteralFixture,
+                         ::testing::ValuesIn(negative_floats));
+
+TEST(SrcLocation, test) {
+  const char *src = R"c(int main(int argc, char *argv[]) {
+  return 0;
+})c";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(18), v.size());
+
+  EXPECT_EQ(TKN_INT, v[0]); // int
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_IDENTIFIER, v[1]); // main
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(5), v[1].col_);
+
+  EXPECT_EQ(TKN_LPAREN, v[2]); // (
+  EXPECT_EQ(su(1), v[2].row_);
+  EXPECT_EQ(su(9), v[2].col_);
+
+  EXPECT_EQ(TKN_INT, v[3]); // int
+  EXPECT_EQ(su(1), v[3].row_);
+  EXPECT_EQ(su(10), v[3].col_);
+
+  EXPECT_EQ(TKN_IDENTIFIER, v[4]); // argc
+  EXPECT_EQ(su(1), v[4].row_);
+  EXPECT_EQ(su(14), v[4].col_);
+
+  EXPECT_EQ(TKN_COMMA, v[5]); // ,
+  EXPECT_EQ(su(1), v[5].row_);
+  EXPECT_EQ(su(18), v[5].col_);
+
+  EXPECT_EQ(TKN_CHAR, v[6]); // char
+  EXPECT_EQ(su(1), v[6].row_);
+  EXPECT_EQ(su(20), v[6].col_);
+
+  EXPECT_EQ(TKN_STAR, v[7]); // *
+  EXPECT_EQ(su(1), v[7].row_);
+  EXPECT_EQ(su(25), v[7].col_);
+
+  EXPECT_EQ(TKN_IDENTIFIER, v[8]); // argv
+  EXPECT_EQ(su(1), v[8].row_);
+  EXPECT_EQ(su(26), v[8].col_);
+
+  EXPECT_EQ(TKN_LSQUARE, v[9]); // [
+  EXPECT_EQ(su(1), v[9].row_);
+  EXPECT_EQ(su(30), v[9].col_);
+
+  EXPECT_EQ(TKN_RSQUARE, v[10]); // ]
+  EXPECT_EQ(su(1), v[10].row_);
+  EXPECT_EQ(su(31), v[10].col_);
+
+  EXPECT_EQ(TKN_RPAREN, v[11]); // )
+  EXPECT_EQ(su(1), v[11].row_);
+  EXPECT_EQ(su(32), v[11].col_);
+
+  EXPECT_EQ(TKN_LBRACE, v[12]); // {
+  EXPECT_EQ(su(1), v[12].row_);
+  EXPECT_EQ(su(34), v[12].col_);
+
+  EXPECT_EQ(TKN_RETURN, v[13]); // return
+  EXPECT_EQ(su(2), v[13].row_);
+  EXPECT_EQ(su(3), v[13].col_);
+
+  EXPECT_EQ(TKN_INTEGER_LIT, v[14]); // 0
+  EXPECT_EQ(su(2), v[14].row_);
+  EXPECT_EQ(su(10), v[14].col_);
+
+  EXPECT_EQ(TKN_SEMI, v[15]); // ;
+  EXPECT_EQ(su(2), v[15].row_);
+  EXPECT_EQ(su(11), v[15].col_);
+
+  EXPECT_EQ(TKN_RBRACE, v[16]); // }
+  EXPECT_EQ(su(3), v[16].row_);
+  EXPECT_EQ(su(1), v[16].col_);
+
+  EXPECT_EQ(TKN_EOF, v[17]);
+  EXPECT_EQ(su(3), v[17].row_);
+  EXPECT_EQ(su(2), v[17].col_);
+
+#undef su
+}
+
+TEST(TwoDots, test) {
+  const char *src = "..";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  EXPECT_EQ(TKN_DOT, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_DOT, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(2), v[1].col_);
+
+  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(su(1), v[2].row_);
+  EXPECT_EQ(su(3), v[2].col_);
+
+#undef su
+}
+
+TEST(InvalidChar, test) {
+  const char *src = R"invalid(`#
+$ @
+ \)invalid";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(1), v.size());
+
+  EXPECT_EQ(TKN_EOF, v[0]);
+  EXPECT_EQ(su(3), v[0].row_);
+  EXPECT_EQ(su(3), v[0].col_);
+
+#undef su
+}

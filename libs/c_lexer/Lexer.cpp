@@ -40,6 +40,34 @@ Lexeme Lexer::eat() {
   return l;
 }
 
+#define eat_whitespace()                                                       \
+  do {                                                                         \
+    c = sr_->eof() ? EOF : sr_->get();                                         \
+    while (std::isspace(c)) {                                                  \
+      switch (c) {                                                             \
+      case '\n':                                                               \
+        ++row_;                                                                \
+        col_ = 1;                                                              \
+        break;                                                                 \
+      case '\v':                                                               \
+        row_ += rows_per_vtab;                                                 \
+        col_ = 1;                                                              \
+        break;                                                                 \
+      case '\f':                                                               \
+        row_ += rows_per_formfeed;                                             \
+        col_ = 1;                                                              \
+        break;                                                                 \
+      case ' ':                                                                \
+        ++col_;                                                                \
+        break;                                                                 \
+      case '\t':                                                               \
+        col_ += cols_per_htab;                                                 \
+        break;                                                                 \
+      }                                                                        \
+      c = sr_->eof() ? EOF : sr_->get();                                       \
+    }                                                                          \
+  } while (0)
+
 #define r(_tkn, _cols)                                                         \
   do {                                                                         \
     col_ += (_cols);                                                           \
@@ -362,6 +390,7 @@ inline bool is_ident_cont(char c) { return std::isalnum(c) || c == '_'; }
 
 const std::uint32_t cols_per_htab = 1;
 const std::uint32_t rows_per_vtab = 1;
+const std::uint32_t rows_per_formfeed = 1;
 
 Lexeme Lexer::scan_token() {
   std::string lex;
@@ -369,27 +398,7 @@ Lexeme Lexer::scan_token() {
   char c;
   bool _hold = true;
 
-  c = sr_->eof() ? EOF : sr_->get();
-  while (std::isspace(c)) {
-    switch (c) {
-    case '\n':
-      ++row_;
-      col_ = 1;
-      break;
-    case '\v':
-      row_ += rows_per_vtab;
-      col_ = 1;
-      break;
-    case ' ':
-      ++col_;
-      break;
-    case '\t':
-      col_ += cols_per_htab;
-      break;
-    }
-
-    c = sr_->eof() ? EOF : sr_->get();
-  }
+  eat_whitespace();
 
   if (c != EOF)
     lex.push_back(c);
@@ -632,13 +641,15 @@ Lexeme Lexer::scan_token() {
         break;
       default:
         if (is_ident_start(c)) {
-          st = GOT_IDENT_CONT;
+          hold(GOT_IDENT_START);
         } else {
-          std::cerr << "Skipped invalid character " << static_cast<int>(c);
-          if (std::isprint(c))
-            std::cerr << " " << c;
-          std::cerr << " at [" << row_ << "," << col_ << "]\n";
+          print_error(std::cerr, "Skipped invalid character ",
+                      static_cast<int>(c), ' ', std::isprint(c) ? c : ' ',
+                      '\n');
           ++col_;
+
+          eat_whitespace();
+          hold(START);
         }
       } // switch (c) for START
       break;
@@ -3857,9 +3868,9 @@ Lexeme Lexer::scan_token() {
       if (std::isxdigit(c)) {
         hold(GOT_HEX_LITERAL);
       } else {
-        std::cerr
-            << "[" << row_ << "," << col_ << "]"
-            << " Hexadecimal prefix is not followed by a hexadecimal digit.\n";
+        print_error(
+            std::cerr,
+            " Hexadecimal prefix must be followed by a hexadecimal digit.\n");
         backup(c);
         invalid();
       }
@@ -3928,12 +3939,10 @@ Lexeme Lexer::scan_token() {
       // and a '\''
       switch (c) {
       case '\'':
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Character constant cannot be empty.\n";
+        print_error(std::cerr, "Character constant cannot be empty.\n");
         invalid();
       case '\n':
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Unterminated character constant detected.\n";
+        print_error(std::cerr, "Unterminated character constant detected.\n");
         backup(c);
         invalid();
       case '\\':
@@ -3954,8 +3963,8 @@ Lexeme Lexer::scan_token() {
       } else if (c == 'x') {
         st = GOT_CHAR_CONST_BS_x;
       } else {
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Invalid escape sequence in character constant.\n";
+        print_error(std::cerr,
+                    "Invalid escape sequence in character constant.\n");
         backup(c);
         invalid();
       }
@@ -3966,8 +3975,7 @@ Lexeme Lexer::scan_token() {
       case '\'':
         r(TKN_INTEGER_LIT, lex.length());
       case '\n':
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Unterminated character constant detected.\n";
+        print_error(std::cerr, "Unterminated character constant detected.\n");
         backup(c);
         invalid();
       case '\\':
@@ -4059,8 +4067,8 @@ Lexeme Lexer::scan_token() {
         if (std::isdigit(c)) {
           st = GOT_FLOAT_CONST_e_SIGN_DIG;
         } else {
-          std::cerr << '[' << row_ << ',' << col_ << ']'
-                    << " Float constant missing exponent digit(s).\n";
+          print_error(std::cerr,
+                      "Floating point constant missing exponent digit(s).\n");
           backup(c);
           invalid();
         }
@@ -4072,8 +4080,8 @@ Lexeme Lexer::scan_token() {
       if (std::isdigit(c)) {
         st = GOT_FLOAT_CONST_e_SIGN_DIG;
       } else {
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Float constant missing exponent digit(s).\n";
+        print_error(std::cerr,
+                    "Floating point constant missing exponent digit(s).\n");
         backup(c);
         invalid();
       }
@@ -4112,8 +4120,8 @@ Lexeme Lexer::scan_token() {
         r(TKN_FLOAT_LIT, lex.length());
         break;
       default:
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Valid float constant suffixes are {df dd dl}.\n";
+        print_error(std::cerr,
+                    "Valid floating point constant suffixes are {df dd dl}.\n");
         backup(c);
         invalid();
         break;
@@ -4128,8 +4136,8 @@ Lexeme Lexer::scan_token() {
         r(TKN_FLOAT_LIT, lex.length());
         break;
       default:
-        std::cerr << '[' << row_ << ',' << col_ << ']'
-                  << " Valid float constant suffixes are {DF DD DL}.\n";
+        print_error(std::cerr,
+                    "Valid floating point constant suffixes are {DF DD DL}.\n");
         backup(c);
         invalid();
         break;
