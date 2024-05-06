@@ -579,7 +579,7 @@ function(myproj_add_test)
                                PUBLIC ${MYPROJ_ADD_TEST_INCS})
   endif()
 
-  set(MYPROJ_DEFS HAVE_CONFIG_H=1 STATIC= ${MYPROJ_ADD_TEST_DEFS})
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 StatiC= ${MYPROJ_ADD_TEST_DEFS})
   target_compile_definitions(${MYPROJ_ADD_TEST_TARGET} PRIVATE ${MYPROJ_DEFS})
 
   target_link_libraries(${MYPROJ_ADD_TEST_TARGET}
@@ -656,7 +656,7 @@ function(myproj_add_test_lib)
                                PUBLIC ${MYPROJ_ADD_TEST_LIB_INCS})
   endif()
 
-  set(MYPROJ_DEFS HAVE_CONFIG_H=1 STATIC= ${MYPROJ_ADD_TEST_LIB_DEFS})
+  set(MYPROJ_DEFS HAVE_CONFIG_H=1 StatiC= ${MYPROJ_ADD_TEST_LIB_DEFS})
   target_compile_definitions(${MYPROJ_ADD_TEST_LIB_TARGET}
     PRIVATE ${MYPROJ_DEFS})
 

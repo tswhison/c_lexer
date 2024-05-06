@@ -9,8 +9,8 @@
 #cmakedefine MYPROJ_GIT_COMMIT_HASH "@MYPROJ_GIT_COMMIT_HASH@"
 #define MYPROJ_GIT_SRC_TREE_DIRTY @MYPROJ_GIT_SRC_TREE_DIRTY@
 
-#ifndef STATIC
-#define STATIC static
+#ifndef StatiC
+#define StatiC static
 #endif
 
 #ifndef UNUSED_PARAM

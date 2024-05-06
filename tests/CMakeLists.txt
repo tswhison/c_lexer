@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-myproj_add_test(TARGET example_test SRCS example_test.cpp CXXSTD 11)
+myproj_add_test(TARGET example_test SRCS example_test.cpp CXXSTD 14)
 
 myproj_add_test_lib(
   TARGET

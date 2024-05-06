@@ -23,9 +23,17 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <type_traits>
+
 #define ASSERT_NONNULL(x) ASSERT_NE(nullptr, x)
 #define ASSERT_NULL ASSERT_EQ(nullptr, x)
 #define EXPECT_NONNULL(x) EXPECT_NE(nullptr, x)
 #define EXPECT_NULL(x) EXPECT_EQ(nullptr, x)
 
 void GTestCaseName(std::string &TestCase, std::string &Test);
+
+template <typename E>
+constexpr std::underlying_type_t<E> EnumToUnsigned(E enumerator) noexcept {
+  return static_cast<std::underlying_type_t<E>>(enumerator);
+}

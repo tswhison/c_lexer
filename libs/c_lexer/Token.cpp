@@ -26,126 +26,126 @@ namespace c_lexer {
 
 #define s(x) #x
 
-const char *ttos[TKN_INVALID + 1] = {
-    s(TKN_PLUS),  // +
-    s(TKN_MINUS), // -
-    s(TKN_STAR),  // *
-    s(TKN_DIV),   // /
-    s(TKN_MOD),   // %
-    s(TKN_INCR),  // ++
-    s(TKN_DECR),  // --
+const char *ttos[static_cast<std::underlying_type_t<Token>>(Token::INVALID) +
+                 1] = {"PLUS",  // +
+                       "MINUS", // -
+                       "STAR",  // *
+                       "DIV",   // /
+                       "MOD",   // %
+                       "INCR",  // ++
+                       "DECR",  // --
 
-    s(TKN_EQUALS),           // ==
-    s(TKN_NOTEQUALS),        // !=
-    s(TKN_GREATER),          // >
-    s(TKN_LESS),             // <
-    s(TKN_GREATER_OR_EQUAL), // >=
-    s(TKN_LESS_OR_EQUAL),    // <=
+                       "EQUALS",           // ==
+                       "NOTEQUALS",        // !=
+                       "GREATER",          // >
+                       "LESS",             // <
+                       "GREATER_OR_EQUAL", // >=
+                       "LESS_OR_EQUAL",    // <=
 
-    s(TKN_LOG_NOT), // !
-    s(TKN_LOG_AND), // &&
-    s(TKN_LOG_OR),  // ||
+                       "LOG_NOT", // !
+                       "LOG_AND", // &&
+                       "LOG_OR",  // ||
 
-    s(TKN_BIT_NOT), // ~
-    s(TKN_AMP),     // &
-    s(TKN_BIT_OR),  // |
-    s(TKN_BIT_XOR), // ^
-    s(TKN_LSHIFT),  // <<
-    s(TKN_RSHIFT),  // >>
+                       "BIT_NOT", // ~
+                       "AMP",     // &
+                       "BIT_OR",  // |
+                       "BIT_XOR", // ^
+                       "LSHIFT",  // <<
+                       "RSHIFT",  // >>
 
-    s(TKN_ASSIGN),        // =
-    s(TKN_ADD_ASSIGN),    // +=
-    s(TKN_SUB_ASSIGN),    // -=
-    s(TKN_MUL_ASSIGN),    // *=
-    s(TKN_DIV_ASSIGN),    // /=
-    s(TKN_MOD_ASSIGN),    // %=
-    s(TKN_AND_ASSIGN),    // &=
-    s(TKN_OR_ASSIGN),     // |=
-    s(TKN_XOR_ASSIGN),    // ^=
-    s(TKN_LSHIFT_ASSIGN), // <<=
-    s(TKN_RSHIFT_ASSIGN), // >>=
+                       "ASSIGN",        // =
+                       "ADD_ASSIGN",    // +=
+                       "SUB_ASSIGN",    // -=
+                       "MUL_ASSIGN",    // *=
+                       "DIV_ASSIGN",    // /=
+                       "MOD_ASSIGN",    // %=
+                       "AND_ASSIGN",    // &=
+                       "OR_ASSIGN",     // |=
+                       "XOR_ASSIGN",    // ^=
+                       "LSHIFT_ASSIGN", // <<=
+                       "RSHIFT_ASSIGN", // >>=
 
-    s(TKN_ARROW),    // ->
-    s(TKN_DOT),      // .
-    s(TKN_ELLIPSIS), // ...
+                       "ARROW",    // ->
+                       "DOT",      // .
+                       "ELLIPSIS", // ...
 
-    s(TKN_COMMA),    // ,
-    s(TKN_QUESTION), // ?
-    s(TKN_COLON),    // :
-    s(TKN_LPAREN),   // (
-    s(TKN_RPAREN),   // )
-    s(TKN_LBRACE),   // {
-    s(TKN_RBRACE),   // }
-    s(TKN_LSQUARE),  // [
-    s(TKN_RSQUARE),  // ]
-    s(TKN_SEMI),     // ;
+                       "COMMA",    // ,
+                       "QUESTION", // ?
+                       "COLON",    // :
+                       "LPAREN",   // (
+                       "RPAREN",   // )
+                       "LBRACE",   // {
+                       "RBRACE",   // }
+                       "LSQUARE",  // [
+                       "RSQUARE",  // ]
+                       "SEMI",     // ;
 
-    s(TKN_IDENTIFIER),
-    s(TKN_INTEGER_LIT), // 123  0xbeef '\n'
-    s(TKN_FLOAT_LIT),   // 3.14
-    s(TKN_STRING_LIT),  // "abc"
+                       "IDENTIFIER",
+                       "INTEGER_LIT", // 123  0xbeef '\n'
+                       "FLOAT_LIT",   // 3.14
+                       "STRING_LIT",  // "abc"
 
-    s(TKN_ALIGNAS),        // alignas (C23)
-    s(TKN_ALIGNOF),        // alignof (C23)
-    s(TKN_AUTO),           // auto
-    s(TKN_BOOL),           // bool (C23)
-    s(TKN_BREAK),          // break
-    s(TKN_CASE),           // case
-    s(TKN_CHAR),           // char
-    s(TKN_CONST),          // const
-    s(TKN_CONSTEXPR),      // constexpr (C23)
-    s(TKN_CONTINUE),       // continue
-    s(TKN_DEFAULT),        // default
-    s(TKN_DO),             // do
-    s(TKN_DOUBLE),         // double
-    s(TKN_ELSE),           // else
-    s(TKN_ENUM),           // enum
-    s(TKN_EXTERN),         // extern
-    s(TKN_FALSE),          // false (C23)
-    s(TKN_FLOAT),          // float
-    s(TKN_FOR),            // for
-    s(TKN_GOTO),           // goto
-    s(TKN_IF),             // if
-    s(TKN_INLINE),         // inline (C99)
-    s(TKN_INT),            // int
-    s(TKN_LONG),           // long
-    s(TKN_NULLPTR),        // nullptr (C23)
-    s(TKN_REGISTER),       // register
-    s(TKN_RESTRICT),       // restrict (C99)
-    s(TKN_RETURN),         // return
-    s(TKN_SHORT),          // short
-    s(TKN_SIGNED),         // signed
-    s(TKN_SIZEOF),         // sizeof
-    s(TKN_STATIC),         // static
-    s(TKN_STATIC_ASSERT),  // static_assert (C23)
-    s(TKN_STRUCT),         // struct
-    s(TKN_SWITCH),         // switch
-    s(TKN_THREAD_LOCAL),   // thread_local (C23)
-    s(TKN_TRUE),           // true (C23)
-    s(TKN_TYPEDEF),        // typedef
-    s(TKN_TYPEOF),         // typeof (C23)
-    s(TKN_TYPEOF_UNQUAL),  // typeof_unqual (C23)
-    s(TKN_UNION),          // union
-    s(TKN_UNSIGNED),       // unsigned
-    s(TKN_VOID),           // void
-    s(TKN_VOLATILE),       // volatile
-    s(TKN_WHILE),          // while
-    s(TKN__ALIGNAS),       // _Alignas (C11)
-    s(TKN__ALIGNOF),       // _Alignof (C11)
-    s(TKN__ATOMIC),        // _Atomic (C11)
-    s(TKN__BITINT),        // _BitInt (C23)
-    s(TKN__BOOL),          // _Bool (C99)
-    s(TKN__COMPLEX),       // _Complex (C99)
-    s(TKN__DECIMAL128),    // _Decimal128 (C23)
-    s(TKN__DECIMAL32),     // _Decimal32 (C23)
-    s(TKN__DECIMAL64),     // _Decimal64 (C23)
-    s(TKN__GENERIC),       // _Generic (C11)
-    s(TKN__IMAGINARY),     // _Imaginary (C99)
-    s(TKN__NORETURN),      // _Noreturn (C11)
-    s(TKN__STATIC_ASSERT), // _Static_assert (C11)
-    s(TKN__THREAD_LOCAL),  // _Thread_local (C11)
+                       "ALIGNAS",        // alignas (C23)
+                       "ALIGNOF",        // alignof (C23)
+                       "AUTO",           // auto
+                       "BOOL",           // bool (C23)
+                       "BREAK",          // break
+                       "CASE",           // case
+                       "CHAR",           // char
+                       "CONST",          // const
+                       "CONSTEXPR",      // constexpr (C23)
+                       "CONTINUE",       // continue
+                       "DEFAULT",        // default
+                       "DO",             // do
+                       "DOUBLE",         // double
+                       "ELSE",           // else
+                       "ENUM",           // enum
+                       "EXTERN",         // extern
+                       "FALSE",          // false (C23)
+                       "FLOAT",          // float
+                       "FOR",            // for
+                       "GOTO",           // goto
+                       "IF",             // if
+                       "INLINE",         // inline (C99)
+                       "INT",            // int
+                       "LONG",           // long
+                       "NULLPTR",        // nullptr (C23)
+                       "REGISTER",       // register
+                       "RESTRICT",       // restrict (C99)
+                       "RETURN",         // return
+                       "SHORT",          // short
+                       "SIGNED",         // signed
+                       "SIZEOF",         // sizeof
+                       "STATIC",         // static
+                       "STATIC_ASSERT",  // static_assert (C23)
+                       "STRUCT",         // struct
+                       "SWITCH",         // switch
+                       "THREAD_LOCAL",   // thread_local (C23)
+                       "TRUE",           // true (C23)
+                       "TYPEDEF",        // typedef
+                       "TYPEOF",         // typeof (C23)
+                       "TYPEOF_UNQUAL",  // typeof_unqual (C23)
+                       "UNION",          // union
+                       "UNSIGNED",       // unsigned
+                       "VOID",           // void
+                       "VOLATILE",       // volatile
+                       "WHILE",          // while
+                       "_ALIGNAS",       // _Alignas (C11)
+                       "_ALIGNOF",       // _Alignof (C11)
+                       "_ATOMIC",        // _Atomic (C11)
+                       "_BITINT",        // _BitInt (C23)
+                       "_BOOL",          // _Bool (C99)
+                       "_COMPLEX",       // _Complex (C99)
+                       "_DECIMAL128",    // _Decimal128 (C23)
+                       "_DECIMAL32",     // _Decimal32 (C23)
+                       "_DECIMAL64",     // _Decimal64 (C23)
+                       "_GENERIC",       // _Generic (C11)
+                       "_IMAGINARY",     // _Imaginary (C99)
+                       "_NORETURN",      // _Noreturn (C11)
+                       "_STATIC_ASSERT", // _Static_assert (C11)
+                       "_THREAD_LOCAL",  // _Thread_local (C11)
 
-    s(TKN_EOF),
-    s(TKN_INVALID)};
+                       "END",
+                       "INVALID"};
 
 } // namespace c_lexer

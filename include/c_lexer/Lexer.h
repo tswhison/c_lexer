@@ -27,6 +27,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -34,7 +35,7 @@ namespace c_lexer {
 
 class Lexeme {
 public:
-  Lexeme(std::string &&lexeme, enum Token token, std::uint32_t row,
+  Lexeme(std::string &&lexeme, Token token, std::uint32_t row,
          std::uint32_t col)
       : lexeme_(std::move(lexeme)), token_(token), row_(row), col_(col) {}
 
@@ -43,11 +44,14 @@ public:
   Lexeme &operator=(Lexeme &&) noexcept = default;
   ~Lexeme() = default;
 
-  enum Token token() const { return token_; }
-  operator enum Token() const { return token_; }
+  Token token() const { return token_; }
+  operator Token() const { return token_; }
+  const char *token_str() const {
+    return ttos[static_cast<std::underlying_type_t<Token>>(token_)];
+  }
 
   std::string lexeme_;
-  enum Token token_;
+  Token token_;
   std::uint32_t row_;
   std::uint32_t col_;
 };

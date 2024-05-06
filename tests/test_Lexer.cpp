@@ -22,7 +22,13 @@
 
 #include <c_lexer/Lexer.h>
 #include <c_lexer/Token.h>
-using namespace c_lexer;
+
+using c_lexer::Lexeme;
+using c_lexer::Lexer;
+using c_lexer::scan_tokens;
+using c_lexer::SourceReader;
+using c_lexer::Token;
+using c_lexer::ttos;
 
 #include "tests/tests.h"
 
@@ -32,14 +38,14 @@ using namespace c_lexer;
 #include <utility>
 #include <vector>
 
-typedef std::tuple<enum Token, const char *, const char *> test_tup_t;
+using test_tup_t = std::tuple<Token, const char *, const char *>;
 
 void basic_token_test(const test_tup_t &tup) {
   const Token tok = std::get<0>(tup);
   const char *tstr = std::get<1>(tup);
   const char *lex = std::get<2>(tup);
 
-  EXPECT_STREQ(tstr, ttos[tok]);
+  EXPECT_STREQ(tstr, ttos[EnumToUnsigned(tok)]);
 
   std::vector<Lexeme> v = scan_tokens(lex);
 
@@ -47,45 +53,45 @@ void basic_token_test(const test_tup_t &tup) {
   EXPECT_EQ(tok, v[0]);
   EXPECT_STREQ(v[0].lexeme_.c_str(), lex);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
 }
 
 class OperatorFixture : public ::testing::TestWithParam<test_tup_t> {};
 
 test_tup_t operators[] = {
-    {TKN_PLUS, "TKN_PLUS", "+"},
-    {TKN_MINUS, "TKN_MINUS", "-"},
-    {TKN_STAR, "TKN_STAR", "*"},
-    {TKN_DIV, "TKN_DIV", "/"},
-    {TKN_MOD, "TKN_MOD", "%"},
-    {TKN_INCR, "TKN_INCR", "++"},
-    {TKN_DECR, "TKN_DECR", "--"},
-    {TKN_EQUALS, "TKN_EQUALS", "=="},
-    {TKN_NOTEQUALS, "TKN_NOTEQUALS", "!="},
-    {TKN_GREATER, "TKN_GREATER", ">"},
-    {TKN_LESS, "TKN_LESS", "<"},
-    {TKN_GREATER_OR_EQUAL, "TKN_GREATER_OR_EQUAL", ">="},
-    {TKN_LESS_OR_EQUAL, "TKN_LESS_OR_EQUAL", "<="},
-    {TKN_LOG_NOT, "TKN_LOG_NOT", "!"},
-    {TKN_LOG_AND, "TKN_LOG_AND", "&&"},
-    {TKN_LOG_OR, "TKN_LOG_OR", "||"},
-    {TKN_BIT_NOT, "TKN_BIT_NOT", "~"},
-    {TKN_AMP, "TKN_AMP", "&"},
-    {TKN_BIT_OR, "TKN_BIT_OR", "|"},
-    {TKN_BIT_XOR, "TKN_BIT_XOR", "^"},
-    {TKN_LSHIFT, "TKN_LSHIFT", "<<"},
-    {TKN_RSHIFT, "TKN_RSHIFT", ">>"},
-    {TKN_ASSIGN, "TKN_ASSIGN", "="},
-    {TKN_ADD_ASSIGN, "TKN_ADD_ASSIGN", "+="},
-    {TKN_SUB_ASSIGN, "TKN_SUB_ASSIGN", "-="},
-    {TKN_MUL_ASSIGN, "TKN_MUL_ASSIGN", "*="},
-    {TKN_DIV_ASSIGN, "TKN_DIV_ASSIGN", "/="},
-    {TKN_MOD_ASSIGN, "TKN_MOD_ASSIGN", "%="},
-    {TKN_AND_ASSIGN, "TKN_AND_ASSIGN", "&="},
-    {TKN_OR_ASSIGN, "TKN_OR_ASSIGN", "|="},
-    {TKN_XOR_ASSIGN, "TKN_XOR_ASSIGN", "^="},
-    {TKN_LSHIFT_ASSIGN, "TKN_LSHIFT_ASSIGN", "<<="},
-    {TKN_RSHIFT_ASSIGN, "TKN_RSHIFT_ASSIGN", ">>="},
+    {Token::PLUS, "PLUS", "+"},
+    {Token::MINUS, "MINUS", "-"},
+    {Token::STAR, "STAR", "*"},
+    {Token::DIV, "DIV", "/"},
+    {Token::MOD, "MOD", "%"},
+    {Token::INCR, "INCR", "++"},
+    {Token::DECR, "DECR", "--"},
+    {Token::EQUALS, "EQUALS", "=="},
+    {Token::NOTEQUALS, "NOTEQUALS", "!="},
+    {Token::GREATER, "GREATER", ">"},
+    {Token::LESS, "LESS", "<"},
+    {Token::GREATER_OR_EQUAL, "GREATER_OR_EQUAL", ">="},
+    {Token::LESS_OR_EQUAL, "LESS_OR_EQUAL", "<="},
+    {Token::LOG_NOT, "LOG_NOT", "!"},
+    {Token::LOG_AND, "LOG_AND", "&&"},
+    {Token::LOG_OR, "LOG_OR", "||"},
+    {Token::BIT_NOT, "BIT_NOT", "~"},
+    {Token::AMP, "AMP", "&"},
+    {Token::BIT_OR, "BIT_OR", "|"},
+    {Token::BIT_XOR, "BIT_XOR", "^"},
+    {Token::LSHIFT, "LSHIFT", "<<"},
+    {Token::RSHIFT, "RSHIFT", ">>"},
+    {Token::ASSIGN, "ASSIGN", "="},
+    {Token::ADD_ASSIGN, "ADD_ASSIGN", "+="},
+    {Token::SUB_ASSIGN, "SUB_ASSIGN", "-="},
+    {Token::MUL_ASSIGN, "MUL_ASSIGN", "*="},
+    {Token::DIV_ASSIGN, "DIV_ASSIGN", "/="},
+    {Token::MOD_ASSIGN, "MOD_ASSIGN", "%="},
+    {Token::AND_ASSIGN, "AND_ASSIGN", "&="},
+    {Token::OR_ASSIGN, "OR_ASSIGN", "|="},
+    {Token::XOR_ASSIGN, "XOR_ASSIGN", "^="},
+    {Token::LSHIFT_ASSIGN, "LSHIFT_ASSIGN", "<<="},
+    {Token::RSHIFT_ASSIGN, "RSHIFT_ASSIGN", ">>="},
 };
 
 TEST_P(OperatorFixture, optest) {
@@ -97,13 +103,13 @@ INSTANTIATE_TEST_SUITE_P(my, OperatorFixture, ::testing::ValuesIn(operators));
 class SeparatorFixture : public ::testing::TestWithParam<test_tup_t> {};
 
 test_tup_t separators[] = {
-    {TKN_ARROW, "TKN_ARROW", "->"},        {TKN_DOT, "TKN_DOT", "."},
-    {TKN_ELLIPSIS, "TKN_ELLIPSIS", "..."}, {TKN_COMMA, "TKN_COMMA", ","},
-    {TKN_QUESTION, "TKN_QUESTION", "?"},   {TKN_COLON, "TKN_COLON", ":"},
-    {TKN_LPAREN, "TKN_LPAREN", "("},       {TKN_RPAREN, "TKN_RPAREN", ")"},
-    {TKN_LBRACE, "TKN_LBRACE", "{"},       {TKN_RBRACE, "TKN_RBRACE", "}"},
-    {TKN_LSQUARE, "TKN_LSQUARE", "["},     {TKN_RSQUARE, "TKN_RSQUARE", "]"},
-    {TKN_SEMI, "TKN_SEMI", ";"},
+    {Token::ARROW, "ARROW", "->"},        {Token::DOT, "DOT", "."},
+    {Token::ELLIPSIS, "ELLIPSIS", "..."}, {Token::COMMA, "COMMA", ","},
+    {Token::QUESTION, "QUESTION", "?"},   {Token::COLON, "COLON", ":"},
+    {Token::LPAREN, "LPAREN", "("},       {Token::RPAREN, "RPAREN", ")"},
+    {Token::LBRACE, "LBRACE", "{"},       {Token::RBRACE, "RBRACE", "}"},
+    {Token::LSQUARE, "LSQUARE", "["},     {Token::RSQUARE, "RSQUARE", "]"},
+    {Token::SEMI, "SEMI", ";"},
 };
 
 TEST_P(SeparatorFixture, septest) {
@@ -115,65 +121,65 @@ INSTANTIATE_TEST_SUITE_P(my, SeparatorFixture, ::testing::ValuesIn(separators));
 class KeywordFixture : public ::testing::TestWithParam<test_tup_t> {};
 
 test_tup_t keywords[] = {
-    {TKN_ALIGNAS, "TKN_ALIGNAS", "alignas"},
-    {TKN_ALIGNOF, "TKN_ALIGNOF", "alignof"},
-    {TKN_AUTO, "TKN_AUTO", "auto"},
-    {TKN_BOOL, "TKN_BOOL", "bool"},
-    {TKN_BREAK, "TKN_BREAK", "break"},
-    {TKN_CASE, "TKN_CASE", "case"},
-    {TKN_CHAR, "TKN_CHAR", "char"},
-    {TKN_CONST, "TKN_CONST", "const"},
-    {TKN_CONSTEXPR, "TKN_CONSTEXPR", "constexpr"},
-    {TKN_CONTINUE, "TKN_CONTINUE", "continue"},
-    {TKN_DEFAULT, "TKN_DEFAULT", "default"},
-    {TKN_DO, "TKN_DO", "do"},
-    {TKN_DOUBLE, "TKN_DOUBLE", "double"},
-    {TKN_ELSE, "TKN_ELSE", "else"},
-    {TKN_ENUM, "TKN_ENUM", "enum"},
-    {TKN_EXTERN, "TKN_EXTERN", "extern"},
-    {TKN_FALSE, "TKN_FALSE", "false"},
-    {TKN_FLOAT, "TKN_FLOAT", "float"},
-    {TKN_FOR, "TKN_FOR", "for"},
-    {TKN_GOTO, "TKN_GOTO", "goto"},
-    {TKN_IF, "TKN_IF", "if"},
-    {TKN_INLINE, "TKN_INLINE", "inline"},
-    {TKN_INT, "TKN_INT", "int"},
-    {TKN_LONG, "TKN_LONG", "long"},
-    {TKN_NULLPTR, "TKN_NULLPTR", "nullptr"},
-    {TKN_REGISTER, "TKN_REGISTER", "register"},
-    {TKN_RESTRICT, "TKN_RESTRICT", "restrict"},
-    {TKN_RETURN, "TKN_RETURN", "return"},
-    {TKN_SHORT, "TKN_SHORT", "short"},
-    {TKN_SIGNED, "TKN_SIGNED", "signed"},
-    {TKN_SIZEOF, "TKN_SIZEOF", "sizeof"},
-    {TKN_STATIC, "TKN_STATIC", "static"},
-    {TKN_STATIC_ASSERT, "TKN_STATIC_ASSERT", "static_assert"},
-    {TKN_STRUCT, "TKN_STRUCT", "struct"},
-    {TKN_SWITCH, "TKN_SWITCH", "switch"},
-    {TKN_THREAD_LOCAL, "TKN_THREAD_LOCAL", "thread_local"},
-    {TKN_TRUE, "TKN_TRUE", "true"},
-    {TKN_TYPEDEF, "TKN_TYPEDEF", "typedef"},
-    {TKN_TYPEOF, "TKN_TYPEOF", "typeof"},
-    {TKN_TYPEOF_UNQUAL, "TKN_TYPEOF_UNQUAL", "typeof_unqual"},
-    {TKN_UNION, "TKN_UNION", "union"},
-    {TKN_UNSIGNED, "TKN_UNSIGNED", "unsigned"},
-    {TKN_VOID, "TKN_VOID", "void"},
-    {TKN_VOLATILE, "TKN_VOLATILE", "volatile"},
-    {TKN_WHILE, "TKN_WHILE", "while"},
-    {TKN__ALIGNAS, "TKN__ALIGNAS", "_Alignas"},
-    {TKN__ALIGNOF, "TKN__ALIGNOF", "_Alignof"},
-    {TKN__ATOMIC, "TKN__ATOMIC", "_Atomic"},
-    {TKN__BITINT, "TKN__BITINT", "_BitInt"},
-    {TKN__BOOL, "TKN__BOOL", "_Bool"},
-    {TKN__COMPLEX, "TKN__COMPLEX", "_Complex"},
-    {TKN__DECIMAL128, "TKN__DECIMAL128", "_Decimal128"},
-    {TKN__DECIMAL32, "TKN__DECIMAL32", "_Decimal32"},
-    {TKN__DECIMAL64, "TKN__DECIMAL64", "_Decimal64"},
-    {TKN__GENERIC, "TKN__GENERIC", "_Generic"},
-    {TKN__IMAGINARY, "TKN__IMAGINARY", "_Imaginary"},
-    {TKN__NORETURN, "TKN__NORETURN", "_Noreturn"},
-    {TKN__STATIC_ASSERT, "TKN__STATIC_ASSERT", "_Static_assert"},
-    {TKN__THREAD_LOCAL, "TKN__THREAD_LOCAL", "_Thread_local"},
+    {Token::ALIGNAS, "ALIGNAS", "alignas"},
+    {Token::ALIGNOF, "ALIGNOF", "alignof"},
+    {Token::AUTO, "AUTO", "auto"},
+    {Token::BOOL, "BOOL", "bool"},
+    {Token::BREAK, "BREAK", "break"},
+    {Token::CASE, "CASE", "case"},
+    {Token::CHAR, "CHAR", "char"},
+    {Token::CONST, "CONST", "const"},
+    {Token::CONSTEXPR, "CONSTEXPR", "constexpr"},
+    {Token::CONTINUE, "CONTINUE", "continue"},
+    {Token::DEFAULT, "DEFAULT", "default"},
+    {Token::DO, "DO", "do"},
+    {Token::DOUBLE, "DOUBLE", "double"},
+    {Token::ELSE, "ELSE", "else"},
+    {Token::ENUM, "ENUM", "enum"},
+    {Token::EXTERN, "EXTERN", "extern"},
+    {Token::FALSE, "FALSE", "false"},
+    {Token::FLOAT, "FLOAT", "float"},
+    {Token::FOR, "FOR", "for"},
+    {Token::GOTO, "GOTO", "goto"},
+    {Token::IF, "IF", "if"},
+    {Token::INLINE, "INLINE", "inline"},
+    {Token::INT, "INT", "int"},
+    {Token::LONG, "LONG", "long"},
+    {Token::NULLPTR, "NULLPTR", "nullptr"},
+    {Token::REGISTER, "REGISTER", "register"},
+    {Token::RESTRICT, "RESTRICT", "restrict"},
+    {Token::RETURN, "RETURN", "return"},
+    {Token::SHORT, "SHORT", "short"},
+    {Token::SIGNED, "SIGNED", "signed"},
+    {Token::SIZEOF, "SIZEOF", "sizeof"},
+    {Token::STATIC, "STATIC", "static"},
+    {Token::STATIC_ASSERT, "STATIC_ASSERT", "static_assert"},
+    {Token::STRUCT, "STRUCT", "struct"},
+    {Token::SWITCH, "SWITCH", "switch"},
+    {Token::THREAD_LOCAL, "THREAD_LOCAL", "thread_local"},
+    {Token::TRUE, "TRUE", "true"},
+    {Token::TYPEDEF, "TYPEDEF", "typedef"},
+    {Token::TYPEOF, "TYPEOF", "typeof"},
+    {Token::TYPEOF_UNQUAL, "TYPEOF_UNQUAL", "typeof_unqual"},
+    {Token::UNION, "UNION", "union"},
+    {Token::UNSIGNED, "UNSIGNED", "unsigned"},
+    {Token::VOID, "VOID", "void"},
+    {Token::VOLATILE, "VOLATILE", "volatile"},
+    {Token::WHILE, "WHILE", "while"},
+    {Token::_ALIGNAS, "_ALIGNAS", "_Alignas"},
+    {Token::_ALIGNOF, "_ALIGNOF", "_Alignof"},
+    {Token::_ATOMIC, "_ATOMIC", "_Atomic"},
+    {Token::_BITINT, "_BITINT", "_BitInt"},
+    {Token::_BOOL, "_BOOL", "_Bool"},
+    {Token::_COMPLEX, "_COMPLEX", "_Complex"},
+    {Token::_DECIMAL128, "_DECIMAL128", "_Decimal128"},
+    {Token::_DECIMAL32, "_DECIMAL32", "_Decimal32"},
+    {Token::_DECIMAL64, "_DECIMAL64", "_Decimal64"},
+    {Token::_GENERIC, "_GENERIC", "_Generic"},
+    {Token::_IMAGINARY, "_IMAGINARY", "_Imaginary"},
+    {Token::_NORETURN, "_NORETURN", "_Noreturn"},
+    {Token::_STATIC_ASSERT, "_STATIC_ASSERT", "_Static_assert"},
+    {Token::_THREAD_LOCAL, "_THREAD_LOCAL", "_Thread_local"},
 };
 
 TEST_P(KeywordFixture, keytest) {
@@ -187,7 +193,7 @@ void empty_token_test(const test_tup_t &tup) {
   const char *tstr = std::get<1>(tup);
   const char *lex = std::get<2>(tup);
 
-  EXPECT_STREQ(tstr, ttos[tok]);
+  EXPECT_STREQ(tstr, ttos[EnumToUnsigned(tok)]);
 
   std::vector<Lexeme> v = scan_tokens(lex);
 
@@ -199,7 +205,7 @@ void empty_token_test(const test_tup_t &tup) {
 class EmptyFixture : public ::testing::TestWithParam<test_tup_t> {};
 
 test_tup_t empty[] = {
-    {TKN_EOF, "TKN_EOF", ""},
+    {Token::END, "END", ""},
 };
 
 TEST_P(EmptyFixture, emptytest) {
@@ -208,13 +214,15 @@ TEST_P(EmptyFixture, emptytest) {
 
 INSTANTIATE_TEST_SUITE_P(my, EmptyFixture, ::testing::ValuesIn(empty));
 
-TEST(Invalid, test) { EXPECT_STREQ(ttos[TKN_INVALID], "TKN_INVALID"); }
+TEST(Invalid, test) {
+  EXPECT_STREQ(ttos[EnumToUnsigned(Token::INVALID)], "INVALID");
+}
 
 class BasicIntegerLiteralFixture : public ::testing::TestWithParam<test_tup_t> {
 };
 
 test_tup_t basic_integer[] = {
-    {TKN_INTEGER_LIT, "TKN_INTEGER_LIT", "0"},
+    {Token::INTEGER_LIT, "INTEGER_LIT", "0"},
 };
 
 TEST_P(BasicIntegerLiteralFixture, basicinttest) {
@@ -228,10 +236,10 @@ void integer_literal_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
   ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
-  EXPECT_EQ(TKN_INTEGER_LIT, v[0]);
+  EXPECT_EQ(Token::INTEGER_LIT, v[0]);
   EXPECT_STREQ(v[0].lexeme_.c_str(), src);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
 }
 
 class IntegerLiteralFixture : public ::testing::TestWithParam<const char *> {};
@@ -387,9 +395,9 @@ void integer_ident_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
   ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(3), v.size());
-  EXPECT_EQ(TKN_INTEGER_LIT, v[0]);
-  EXPECT_EQ(TKN_IDENTIFIER, v[1]);
-  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(Token::INTEGER_LIT, v[0]);
+  EXPECT_EQ(Token::IDENTIFIER, v[1]);
+  EXPECT_EQ(Token::END, v[2]);
 }
 
 class IntegerIdentFixture : public ::testing::TestWithParam<const char *> {};
@@ -412,10 +420,10 @@ void float_literal_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
   ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
-  EXPECT_EQ(TKN_FLOAT_LIT, v[0]);
+  EXPECT_EQ(Token::FLOAT_LIT, v[0]);
   EXPECT_STREQ(v[0].lexeme_.c_str(), src);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
 }
 
 class FloatLiteralFixture : public ::testing::TestWithParam<const char *> {};
@@ -452,7 +460,7 @@ INSTANTIATE_TEST_SUITE_P(my, FloatLiteralFixture, ::testing::ValuesIn(floats));
 void neg_float_literal_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
 
   if (v.size() == 3) {
     std::string f(src);
@@ -463,12 +471,12 @@ void neg_float_literal_test(const char *src) {
     std::string i(src);
     i = i.substr(i.length() - 1, 1);
 
-    EXPECT_EQ(TKN_IDENTIFIER, v[1]);
+    EXPECT_EQ(Token::IDENTIFIER, v[1]);
     EXPECT_STREQ(v[1].lexeme_.c_str(), i.c_str());
 
-    EXPECT_EQ(TKN_EOF, v[2]);
+    EXPECT_EQ(Token::END, v[2]);
   } else {
-    EXPECT_EQ(TKN_EOF, v[1]);
+    EXPECT_EQ(Token::END, v[1]);
   }
 }
 
@@ -500,75 +508,75 @@ TEST(SrcLocation, test) {
 
   ASSERT_EQ(su(18), v.size());
 
-  EXPECT_EQ(TKN_INT, v[0]); // int
+  EXPECT_EQ(Token::INT, v[0]); // int
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_IDENTIFIER, v[1]); // main
+  EXPECT_EQ(Token::IDENTIFIER, v[1]); // main
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(5), v[1].col_);
 
-  EXPECT_EQ(TKN_LPAREN, v[2]); // (
+  EXPECT_EQ(Token::LPAREN, v[2]); // (
   EXPECT_EQ(su(1), v[2].row_);
   EXPECT_EQ(su(9), v[2].col_);
 
-  EXPECT_EQ(TKN_INT, v[3]); // int
+  EXPECT_EQ(Token::INT, v[3]); // int
   EXPECT_EQ(su(1), v[3].row_);
   EXPECT_EQ(su(10), v[3].col_);
 
-  EXPECT_EQ(TKN_IDENTIFIER, v[4]); // argc
+  EXPECT_EQ(Token::IDENTIFIER, v[4]); // argc
   EXPECT_EQ(su(1), v[4].row_);
   EXPECT_EQ(su(14), v[4].col_);
 
-  EXPECT_EQ(TKN_COMMA, v[5]); // ,
+  EXPECT_EQ(Token::COMMA, v[5]); // ,
   EXPECT_EQ(su(1), v[5].row_);
   EXPECT_EQ(su(18), v[5].col_);
 
-  EXPECT_EQ(TKN_CHAR, v[6]); // char
+  EXPECT_EQ(Token::CHAR, v[6]); // char
   EXPECT_EQ(su(1), v[6].row_);
   EXPECT_EQ(su(20), v[6].col_);
 
-  EXPECT_EQ(TKN_STAR, v[7]); // *
+  EXPECT_EQ(Token::STAR, v[7]); // *
   EXPECT_EQ(su(1), v[7].row_);
   EXPECT_EQ(su(25), v[7].col_);
 
-  EXPECT_EQ(TKN_IDENTIFIER, v[8]); // argv
+  EXPECT_EQ(Token::IDENTIFIER, v[8]); // argv
   EXPECT_EQ(su(1), v[8].row_);
   EXPECT_EQ(su(26), v[8].col_);
 
-  EXPECT_EQ(TKN_LSQUARE, v[9]); // [
+  EXPECT_EQ(Token::LSQUARE, v[9]); // [
   EXPECT_EQ(su(1), v[9].row_);
   EXPECT_EQ(su(30), v[9].col_);
 
-  EXPECT_EQ(TKN_RSQUARE, v[10]); // ]
+  EXPECT_EQ(Token::RSQUARE, v[10]); // ]
   EXPECT_EQ(su(1), v[10].row_);
   EXPECT_EQ(su(31), v[10].col_);
 
-  EXPECT_EQ(TKN_RPAREN, v[11]); // )
+  EXPECT_EQ(Token::RPAREN, v[11]); // )
   EXPECT_EQ(su(1), v[11].row_);
   EXPECT_EQ(su(32), v[11].col_);
 
-  EXPECT_EQ(TKN_LBRACE, v[12]); // {
+  EXPECT_EQ(Token::LBRACE, v[12]); // {
   EXPECT_EQ(su(1), v[12].row_);
   EXPECT_EQ(su(34), v[12].col_);
 
-  EXPECT_EQ(TKN_RETURN, v[13]); // return
+  EXPECT_EQ(Token::RETURN, v[13]); // return
   EXPECT_EQ(su(2), v[13].row_);
   EXPECT_EQ(su(3), v[13].col_);
 
-  EXPECT_EQ(TKN_INTEGER_LIT, v[14]); // 0
+  EXPECT_EQ(Token::INTEGER_LIT, v[14]); // 0
   EXPECT_EQ(su(2), v[14].row_);
   EXPECT_EQ(su(10), v[14].col_);
 
-  EXPECT_EQ(TKN_SEMI, v[15]); // ;
+  EXPECT_EQ(Token::SEMI, v[15]); // ;
   EXPECT_EQ(su(2), v[15].row_);
   EXPECT_EQ(su(11), v[15].col_);
 
-  EXPECT_EQ(TKN_RBRACE, v[16]); // }
+  EXPECT_EQ(Token::RBRACE, v[16]); // }
   EXPECT_EQ(su(3), v[16].row_);
   EXPECT_EQ(su(1), v[16].col_);
 
-  EXPECT_EQ(TKN_EOF, v[17]);
+  EXPECT_EQ(Token::END, v[17]);
   EXPECT_EQ(su(3), v[17].row_);
   EXPECT_EQ(su(2), v[17].col_);
 
@@ -584,15 +592,15 @@ TEST(TwoDots, test) {
 
   ASSERT_EQ(su(3), v.size());
 
-  EXPECT_EQ(TKN_DOT, v[0]);
+  EXPECT_EQ(Token::DOT, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_DOT, v[1]);
+  EXPECT_EQ(Token::DOT, v[1]);
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(2), v[1].col_);
 
-  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(Token::END, v[2]);
   EXPECT_EQ(su(1), v[2].row_);
   EXPECT_EQ(su(3), v[2].col_);
 
@@ -608,11 +616,11 @@ TEST(IdentThenInvalid, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_IDENTIFIER, v[0]);
+  EXPECT_EQ(Token::IDENTIFIER, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(3), v[1].col_);
 
@@ -630,7 +638,7 @@ $ @
 
   ASSERT_EQ(su(1), v.size());
 
-  EXPECT_EQ(TKN_EOF, v[0]);
+  EXPECT_EQ(Token::END, v[0]);
   EXPECT_EQ(su(3), v[0].row_);
   EXPECT_EQ(su(3), v[0].col_);
 
@@ -646,15 +654,15 @@ TEST(InvalidHex, test) {
 
   ASSERT_EQ(su(3), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_IDENTIFIER, v[1]);
+  EXPECT_EQ(Token::IDENTIFIER, v[1]);
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(3), v[1].col_);
 
-  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(Token::END, v[2]);
   EXPECT_EQ(su(1), v[2].row_);
   EXPECT_EQ(su(4), v[2].col_);
 
@@ -670,11 +678,11 @@ TEST(EmptyCharConst, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(3), v[1].col_);
 
@@ -691,11 +699,11 @@ TEST(NewlineInCharConst, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(2), v[1].row_);
   EXPECT_EQ(su(1), v[1].col_);
 
@@ -706,11 +714,11 @@ TEST(NewlineInCharConst, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(2), v[1].row_);
   EXPECT_EQ(su(1), v[1].col_);
 
@@ -721,11 +729,11 @@ TEST(NewlineInCharConst, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(2), v[1].row_);
   EXPECT_EQ(su(1), v[1].col_);
 
@@ -736,11 +744,11 @@ TEST(NewlineInCharConst, test) {
 
   ASSERT_EQ(su(2), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
   EXPECT_EQ(su(2), v[1].row_);
   EXPECT_EQ(su(1), v[1].col_);
 
@@ -756,15 +764,15 @@ TEST(BadEscapeInCharConst, test) {
 
   ASSERT_EQ(su(3), v.size());
 
-  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(Token::INVALID, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
 
-  EXPECT_EQ(TKN_INVALID, v[1]);
+  EXPECT_EQ(Token::INVALID, v[1]);
   EXPECT_EQ(su(1), v[1].row_);
   EXPECT_EQ(su(4), v[1].col_);
 
-  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(Token::END, v[2]);
   EXPECT_EQ(su(1), v[2].row_);
   EXPECT_EQ(su(5), v[2].col_);
 
@@ -775,10 +783,10 @@ void identifier_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
   ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
-  EXPECT_EQ(TKN_IDENTIFIER, v[0]);
+  EXPECT_EQ(Token::IDENTIFIER, v[0]);
   EXPECT_STREQ(v[0].lexeme_.c_str(), src);
 
-  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(Token::END, v[1]);
 }
 
 class IdentifierFixture : public ::testing::TestWithParam<const char *> {};

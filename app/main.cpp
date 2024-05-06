@@ -21,7 +21,11 @@
 // SOFTWARE.
 
 #include <c_lexer/Lexer.h>
-using namespace c_lexer;
+
+using c_lexer::Lexeme;
+using c_lexer::Lexer;
+using c_lexer::SourceReader;
+using c_lexer::Token;
 
 #include <fstream>
 #include <memory>
@@ -38,11 +42,11 @@ int main(int argc, char *argv[]) {
 
   Lexer lexer(std::move(reader));
 
-  while (lexer.peek() != TKN_EOF) {
+  while (lexer.peek() != Token::END) {
     Lexeme lexeme = lexer.eat();
 
     std::cout << lexeme.lexeme_ << " (" << lexeme.row_ << "," << lexeme.col_
-              << ") : " << ttos[lexeme.token()] << '\n';
+              << ") : Token::" << lexeme.token_str() << '\n';
   }
 
   if (f.is_open())

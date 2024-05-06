@@ -22,132 +22,134 @@
 
 #pragma once
 #include <string>
+#include <type_traits>
 
 namespace c_lexer {
 
-enum Token {
-  TKN_PLUS,  // +
-  TKN_MINUS, // -
-  TKN_STAR,  // *
-  TKN_DIV,   // /
-  TKN_MOD,   // %
-  TKN_INCR,  // ++
-  TKN_DECR,  // --
+enum class Token {
+  PLUS,  // +
+  MINUS, // -
+  STAR,  // *
+  DIV,   // /
+  MOD,   // %
+  INCR,  // ++
+  DECR,  // --
 
-  TKN_EQUALS,           // ==
-  TKN_NOTEQUALS,        // !=
-  TKN_GREATER,          // >
-  TKN_LESS,             // <
-  TKN_GREATER_OR_EQUAL, // >=
-  TKN_LESS_OR_EQUAL,    // <=
+  EQUALS,           // ==
+  NOTEQUALS,        // !=
+  GREATER,          // >
+  LESS,             // <
+  GREATER_OR_EQUAL, // >=
+  LESS_OR_EQUAL,    // <=
 
-  TKN_LOG_NOT, // !
-  TKN_LOG_AND, // &&
-  TKN_LOG_OR,  // ||
+  LOG_NOT, // !
+  LOG_AND, // &&
+  LOG_OR,  // ||
 
-  TKN_BIT_NOT, // ~
-  TKN_AMP,     // &
-  TKN_BIT_OR,  // |
-  TKN_BIT_XOR, // ^
-  TKN_LSHIFT,  // <<
-  TKN_RSHIFT,  // >>
+  BIT_NOT, // ~
+  AMP,     // &
+  BIT_OR,  // |
+  BIT_XOR, // ^
+  LSHIFT,  // <<
+  RSHIFT,  // >>
 
-  TKN_ASSIGN,        // =
-  TKN_ADD_ASSIGN,    // +=
-  TKN_SUB_ASSIGN,    // -=
-  TKN_MUL_ASSIGN,    // *=
-  TKN_DIV_ASSIGN,    // /=
-  TKN_MOD_ASSIGN,    // %=
-  TKN_AND_ASSIGN,    // &=
-  TKN_OR_ASSIGN,     // |=
-  TKN_XOR_ASSIGN,    // ^=
-  TKN_LSHIFT_ASSIGN, // <<=
-  TKN_RSHIFT_ASSIGN, // >>=
+  ASSIGN,        // =
+  ADD_ASSIGN,    // +=
+  SUB_ASSIGN,    // -=
+  MUL_ASSIGN,    // *=
+  DIV_ASSIGN,    // /=
+  MOD_ASSIGN,    // %=
+  AND_ASSIGN,    // &=
+  OR_ASSIGN,     // |=
+  XOR_ASSIGN,    // ^=
+  LSHIFT_ASSIGN, // <<=
+  RSHIFT_ASSIGN, // >>=
 
-  TKN_ARROW,    // ->
-  TKN_DOT,      // .
-  TKN_ELLIPSIS, // ...
+  ARROW,    // ->
+  DOT,      // .
+  ELLIPSIS, // ...
 
-  TKN_COMMA,    // ,
-  TKN_QUESTION, // ?
-  TKN_COLON,    // :
-  TKN_LPAREN,   // (
-  TKN_RPAREN,   // )
-  TKN_LBRACE,   // {
-  TKN_RBRACE,   // }
-  TKN_LSQUARE,  // [
-  TKN_RSQUARE,  // ]
-  TKN_SEMI,     // ;
+  COMMA,    // ,
+  QUESTION, // ?
+  COLON,    // :
+  LPAREN,   // (
+  RPAREN,   // )
+  LBRACE,   // {
+  RBRACE,   // }
+  LSQUARE,  // [
+  RSQUARE,  // ]
+  SEMI,     // ;
 
-  TKN_IDENTIFIER,
-  TKN_INTEGER_LIT, // 123  0xbeef '\n'
-  TKN_FLOAT_LIT,   // 3.14
-  TKN_STRING_LIT,  // "abc"
+  IDENTIFIER,
+  INTEGER_LIT, // 123  0xbeef '\n'
+  FLOAT_LIT,   // 3.14
+  STRING_LIT,  // "abc"
 
-  TKN_ALIGNAS,        // alignas (C23)
-  TKN_ALIGNOF,        // alignof (C23)
-  TKN_AUTO,           // auto
-  TKN_BOOL,           // bool (C23)
-  TKN_BREAK,          // break
-  TKN_CASE,           // case
-  TKN_CHAR,           // char
-  TKN_CONST,          // const
-  TKN_CONSTEXPR,      // constexpr (C23)
-  TKN_CONTINUE,       // continue
-  TKN_DEFAULT,        // default
-  TKN_DO,             // do
-  TKN_DOUBLE,         // double
-  TKN_ELSE,           // else
-  TKN_ENUM,           // enum
-  TKN_EXTERN,         // extern
-  TKN_FALSE,          // false (C23)
-  TKN_FLOAT,          // float
-  TKN_FOR,            // for
-  TKN_GOTO,           // goto
-  TKN_IF,             // if
-  TKN_INLINE,         // inline (C99)
-  TKN_INT,            // int
-  TKN_LONG,           // long
-  TKN_NULLPTR,        // nullptr (C23)
-  TKN_REGISTER,       // register
-  TKN_RESTRICT,       // restrict (C99)
-  TKN_RETURN,         // return
-  TKN_SHORT,          // short
-  TKN_SIGNED,         // signed
-  TKN_SIZEOF,         // sizeof
-  TKN_STATIC,         // static
-  TKN_STATIC_ASSERT,  // static_assert (C23)
-  TKN_STRUCT,         // struct
-  TKN_SWITCH,         // switch
-  TKN_THREAD_LOCAL,   // thread_local (C23)
-  TKN_TRUE,           // true (C23)
-  TKN_TYPEDEF,        // typedef
-  TKN_TYPEOF,         // typeof (C23)
-  TKN_TYPEOF_UNQUAL,  // typeof_unqual (C23)
-  TKN_UNION,          // union
-  TKN_UNSIGNED,       // unsigned
-  TKN_VOID,           // void
-  TKN_VOLATILE,       // volatile
-  TKN_WHILE,          // while
-  TKN__ALIGNAS,       // _Alignas (C11)
-  TKN__ALIGNOF,       // _Alignof (C11)
-  TKN__ATOMIC,        // _Atomic (C11)
-  TKN__BITINT,        // _BitInt (C23)
-  TKN__BOOL,          // _Bool (C99)
-  TKN__COMPLEX,       // _Complex (C99)
-  TKN__DECIMAL128,    // _Decimal128 (C23)
-  TKN__DECIMAL32,     // _Decimal32 (C23)
-  TKN__DECIMAL64,     // _Decimal64 (C23)
-  TKN__GENERIC,       // _Generic (C11)
-  TKN__IMAGINARY,     // _Imaginary (C99)
-  TKN__NORETURN,      // _Noreturn (C11)
-  TKN__STATIC_ASSERT, // _Static_assert (C11)
-  TKN__THREAD_LOCAL,  // _Thread_local (C11)
+  ALIGNAS,        // alignas (C23)
+  ALIGNOF,        // alignof (C23)
+  AUTO,           // auto
+  BOOL,           // bool (C23)
+  BREAK,          // break
+  CASE,           // case
+  CHAR,           // char
+  CONST,          // const
+  CONSTEXPR,      // constexpr (C23)
+  CONTINUE,       // continue
+  DEFAULT,        // default
+  DO,             // do
+  DOUBLE,         // double
+  ELSE,           // else
+  ENUM,           // enum
+  EXTERN,         // extern
+  FALSE,          // false (C23)
+  FLOAT,          // float
+  FOR,            // for
+  GOTO,           // goto
+  IF,             // if
+  INLINE,         // inline (C99)
+  INT,            // int
+  LONG,           // long
+  NULLPTR,        // nullptr (C23)
+  REGISTER,       // register
+  RESTRICT,       // restrict (C99)
+  RETURN,         // return
+  SHORT,          // short
+  SIGNED,         // signed
+  SIZEOF,         // sizeof
+  STATIC,         // static
+  STATIC_ASSERT,  // static_assert (C23)
+  STRUCT,         // struct
+  SWITCH,         // switch
+  THREAD_LOCAL,   // thread_local (C23)
+  TRUE,           // true (C23)
+  TYPEDEF,        // typedef
+  TYPEOF,         // typeof (C23)
+  TYPEOF_UNQUAL,  // typeof_unqual (C23)
+  UNION,          // union
+  UNSIGNED,       // unsigned
+  VOID,           // void
+  VOLATILE,       // volatile
+  WHILE,          // while
+  _ALIGNAS,       // _Alignas (C11)
+  _ALIGNOF,       // _Alignof (C11)
+  _ATOMIC,        // _Atomic (C11)
+  _BITINT,        // _BitInt (C23)
+  _BOOL,          // _Bool (C99)
+  _COMPLEX,       // _Complex (C99)
+  _DECIMAL128,    // _Decimal128 (C23)
+  _DECIMAL32,     // _Decimal32 (C23)
+  _DECIMAL64,     // _Decimal64 (C23)
+  _GENERIC,       // _Generic (C11)
+  _IMAGINARY,     // _Imaginary (C99)
+  _NORETURN,      // _Noreturn (C11)
+  _STATIC_ASSERT, // _Static_assert (C11)
+  _THREAD_LOCAL,  // _Thread_local (C11)
 
-  TKN_EOF,
-  TKN_INVALID
+  END,
+  INVALID
 };
 
-extern const char *ttos[TKN_INVALID + 1];
+extern const char
+    *ttos[static_cast<std::underlying_type_t<Token>>(Token::INVALID) + 1];
 
 } // namespace c_lexer
