@@ -20,15 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "gtest/gtest.h"
+#include <c_lexer/Lexer.h>
+#include <c_lexer/Token.h>
+
+#include "tests/tests.h"
+
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-
-#include "tests.h"
-#include <c_lexer/Lexer.h>
 
 typedef std::tuple<enum Token, const char *, const char *> test_tup_t;
 
@@ -234,146 +235,145 @@ void integer_literal_test(const char *src) {
 
 class IntegerLiteralFixture : public ::testing::TestWithParam<const char *> {};
 
-const char *integer[] = {
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "0123456789",
-    "123456789",
+const char *integer[] = {"0",
+                         "1",
+                         "2",
+                         "3",
+                         "4",
+                         "5",
+                         "6",
+                         "7",
+                         "8",
+                         "9",
+                         "0123456789",
+                         "123456789",
 
-    "0xbeef",
-    "0xau",
-    "0xaul",
-    "0xauL",
-    "0xaull",
-    "0xauLL",
-    "0xaU",
-    "0xaUl",
-    "0xaUL",
-    "0xaUll",
-    "0xaULL",
-    "0xal",
-    "0xalu",
-    "0xalU",
-    "0xaL",
-    "0xaLu",
-    "0xaLU",
-    "0xall",
-    "0xallu",
-    "0xallU",
-    "0xaLL",
-    "0xaLLu",
-    "0xaLLU",
+                         "0xbeef",
+                         "0xau",
+                         "0xaul",
+                         "0xauL",
+                         "0xaull",
+                         "0xauLL",
+                         "0xaU",
+                         "0xaUl",
+                         "0xaUL",
+                         "0xaUll",
+                         "0xaULL",
+                         "0xal",
+                         "0xalu",
+                         "0xalU",
+                         "0xaL",
+                         "0xaLu",
+                         "0xaLU",
+                         "0xall",
+                         "0xallu",
+                         "0xallU",
+                         "0xaLL",
+                         "0xaLLu",
+                         "0xaLLU",
 
-    "0u",
-    "0ul",
-    "0uL",
-    "0ull",
-    "0uLL",
-    "0U",
-    "0Ul",
-    "0UL",
-    "0Ull",
-    "0ULL",
-    "0l",
-    "0lu",
-    "0lU",
-    "0L",
-    "0Lu",
-    "0LU",
-    "0ll",
-    "0llu",
-    "0llU",
-    "0LL",
-    "0LLu",
-    "0LLU",
-    "1u",
-    "1ul",
-    "1uL",
-    "1ull",
-    "1uLL",
-    "1U",
-    "1Ul",
-    "1UL",
-    "1Ull",
-    "1ULL",
-    "1l",
-    "1lu",
-    "1lU",
-    "1L",
-    "1Lu",
-    "1LU",
-    "1ll",
-    "1llu",
-    "1llU",
-    "1LL",
-    "1LLu",
-    "1LLU",
+                         "0u",
+                         "0ul",
+                         "0uL",
+                         "0ull",
+                         "0uLL",
+                         "0U",
+                         "0Ul",
+                         "0UL",
+                         "0Ull",
+                         "0ULL",
+                         "0l",
+                         "0lu",
+                         "0lU",
+                         "0L",
+                         "0Lu",
+                         "0LU",
+                         "0ll",
+                         "0llu",
+                         "0llU",
+                         "0LL",
+                         "0LLu",
+                         "0LLU",
+                         "1u",
+                         "1ul",
+                         "1uL",
+                         "1ull",
+                         "1uLL",
+                         "1U",
+                         "1Ul",
+                         "1UL",
+                         "1Ull",
+                         "1ULL",
+                         "1l",
+                         "1lu",
+                         "1lU",
+                         "1L",
+                         "1Lu",
+                         "1LU",
+                         "1ll",
+                         "1llu",
+                         "1llU",
+                         "1LL",
+                         "1LLu",
+                         "1LLU",
 
-    "0777",
-    "0777u",
-    "0777ul",
-    "0777uL",
-    "0777ull",
-    "0777uLL",
-    "0777U",
-    "0777Ul",
-    "0777UL",
-    "0777Ull",
-    "0777ULL",
-    "0777l",
-    "0777lu",
-    "0777lU",
-    "0777L",
-    "0777Lu",
-    "0777LU",
-    "0777ll",
-    "0777llu",
-    "0777llU",
-    "0777LL",
-    "0777LLu",
-    "0777LLU",
+                         "0777",
+                         "0777u",
+                         "0777ul",
+                         "0777uL",
+                         "0777ull",
+                         "0777uLL",
+                         "0777U",
+                         "0777Ul",
+                         "0777UL",
+                         "0777Ull",
+                         "0777ULL",
+                         "0777l",
+                         "0777lu",
+                         "0777lU",
+                         "0777L",
+                         "0777Lu",
+                         "0777LU",
+                         "0777ll",
+                         "0777llu",
+                         "0777llU",
+                         "0777LL",
+                         "0777LLu",
+                         "0777LLU",
 
-    "\'a\'",
-    "u\'a\'",
-    "u8\'a\'",
-    "U\'a\'",
-    "L\'a\'",
-    "\'\\\'\'",
-    "\'\\\"\'",
-    "\'\\?\'",
-    "'\\\\\'",
-    "\'\\a\'",
-    "\'\\b\'",
-    "\'\\f\'",
-    "\'\\n\'",
-    "\'\\r\'",
-    "\'\\t\'",
-    "\'\\v\'",
-    "u\'\\a\'",
-    "u8\'\\b\'",
-    "U\'\\f\'",
-    "L\'\\n\'",
-    "u\'\\r\'",
-    "u8\'\\t\'",
-    "U\'\\v\'",
-    "\'\\7\'",
-    "u\'\\77\'",
-    "U\'\\777\'",
-    "L\'\\777a\'",
-    "\'\\xa\'",
-    "u\'\\xab\'",
-    "u8\'\\xabc\'",
-    "U\'\\xabcd\'",
-    "\' \'",
-};
+                         "\'a\'",
+                         "u\'a\'",
+                         "u8\'a\'",
+                         "U\'a\'",
+                         "L\'a\'",
+                         "\'\\\'\'",
+                         "\'\\\"\'",
+                         "\'\\?\'",
+                         "'\\\\\'",
+                         "\'\\a\'",
+                         "\'\\b\'",
+                         "\'\\f\'",
+                         "\'\\n\'",
+                         "\'\\r\'",
+                         "\'\\t\'",
+                         "\'\\v\'",
+                         "u\'\\a\'",
+                         "u8\'\\b\'",
+                         "U\'\\f\'",
+                         "L\'\\n\'",
+                         "u\'\\r\'",
+                         "u8\'\\t\'",
+                         "U\'\\v\'",
+                         "\'\\7\'",
+                         "u\'\\77\'",
+                         "U\'\\777\'",
+                         "L\'\\777a\'",
+                         "\'\\xa\'",
+                         "u\'\\xab\'",
+                         "u8\'\\xabc\'",
+                         "U\'\\xabcd\'",
+                         "\' \'",
+                         "\'\\t\\t\'"};
 
 TEST_P(IntegerLiteralFixture, inttest) {
   ASSERT_NO_FATAL_FAILURE(integer_literal_test(GetParam()));
@@ -581,6 +581,8 @@ TEST(TwoDots, test) {
 
 #define su(x) static_cast<std::uint32_t>(x)
 
+  ASSERT_EQ(su(3), v.size());
+
   EXPECT_EQ(TKN_DOT, v[0]);
   EXPECT_EQ(su(1), v[0].row_);
   EXPECT_EQ(su(1), v[0].col_);
@@ -592,6 +594,26 @@ TEST(TwoDots, test) {
   EXPECT_EQ(TKN_EOF, v[2]);
   EXPECT_EQ(su(1), v[2].row_);
   EXPECT_EQ(su(3), v[2].col_);
+
+#undef su
+}
+
+TEST(IdentThenInvalid, test) {
+  const char *src = "_$";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_IDENTIFIER, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(3), v[1].col_);
 
 #undef su
 }
@@ -613,3 +635,464 @@ $ @
 
 #undef su
 }
+
+TEST(InvalidHex, test) {
+  const char *src = "0xx";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(3), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_IDENTIFIER, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(3), v[1].col_);
+
+  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(su(1), v[2].row_);
+  EXPECT_EQ(su(4), v[2].col_);
+
+#undef su
+}
+
+TEST(EmptyCharConst, test) {
+  const char *src = "\'\'";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(3), v[1].col_);
+
+#undef su
+}
+
+TEST(NewlineInCharConst, test) {
+  const char *src = R"invalid('
+)invalid";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(2), v[1].row_);
+  EXPECT_EQ(su(1), v[1].col_);
+
+  const char *src2 = R"invalid('a
+)invalid";
+
+  v = scan_tokens(src2);
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(2), v[1].row_);
+  EXPECT_EQ(su(1), v[1].col_);
+
+  const char *src3 = R"invalid('\ta
+)invalid";
+
+  v = scan_tokens(src3);
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(2), v[1].row_);
+  EXPECT_EQ(su(1), v[1].col_);
+
+  const char *src4 = R"invalid('\t\t
+)invalid";
+
+  v = scan_tokens(src4);
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+  EXPECT_EQ(su(2), v[1].row_);
+  EXPECT_EQ(su(1), v[1].col_);
+
+#undef su
+}
+
+TEST(BadEscapeInCharConst, test) {
+  const char *src = R"invalid('\j')invalid";
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+#define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(3), v.size());
+
+  EXPECT_EQ(TKN_INVALID, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(TKN_INVALID, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(4), v[1].col_);
+
+  EXPECT_EQ(TKN_EOF, v[2]);
+  EXPECT_EQ(su(1), v[2].row_);
+  EXPECT_EQ(su(5), v[2].col_);
+
+#undef su
+}
+
+void identifier_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
+  EXPECT_EQ(TKN_IDENTIFIER, v[0]);
+  EXPECT_STREQ(v[0].lexeme_.c_str(), src);
+
+  EXPECT_EQ(TKN_EOF, v[1]);
+}
+
+class IdentifierFixture : public ::testing::TestWithParam<const char *> {};
+
+const char *identifiers[] = {
+    "_z",
+    "_Az",
+    "_Alz",
+    "_Aliz",
+    "_Aligz",
+    "_Alignz",
+    "_Alignaz",
+    "_Alignoz",
+    "_Atz",
+    "_Atoz",
+    "_Atomz",
+    "_Atomiz",
+    "_Bz",
+    "_Biz",
+    "_Bitz",
+    "_BitIz",
+    "_BitInz",
+    "_Boz",
+    "_Booz",
+    "_Cz",
+    "_Coz",
+    "_Comz",
+    "_Compz",
+    "_Complz",
+    "_Complez",
+    "_Dz",
+    "_Dez",
+    "_Decz",
+    "_Deciz",
+    "_Decimz",
+    "_Decimaz",
+    "_Decimalz",
+    "_Decimal1z",
+    "_Decimal12z",
+    "_Decimal3z",
+    "_Decimal6z",
+    "_Gz",
+    "_Gez",
+    "_Genz",
+    "_Genez",
+    "_Generz",
+    "_Generiz",
+    "_Iz",
+    "_Imz",
+    "_Imaz",
+    "_Imagz",
+    "_Imagiz",
+    "_Imaginz",
+    "_Imaginaz",
+    "_Imaginarz",
+    "_Nz",
+    "_Noz",
+    "_Norz",
+    "_Norez",
+    "_Noretz",
+    "_Noretuz",
+    "_Noreturz",
+    "_Sz",
+    "_Stz",
+    "_Staz",
+    "_Statz",
+    "_Statiz",
+    "_Staticz",
+    "_Static_z",
+    "_Static_az",
+    "_Static_asz",
+    "_Static_assz",
+    "_Static_assez",
+    "_Static_asserz",
+    "_Tz",
+    "_Thz",
+    "_Thrz",
+    "_Threz",
+    "_Threaz",
+    "_Threadz",
+    "_Thread_z",
+    "_Thread_lz",
+    "_Thread_loz",
+    "_Thread_locz",
+    "_Thread_locaz",
+    "az",
+    "alz",
+    "aliz",
+    "aligz",
+    "alignz",
+    "alignaz",
+    "alignoz",
+    "auz",
+    "autz",
+    "bz",
+    "boz",
+    "booz",
+    "brz",
+    "brez",
+    "breaz",
+    "cz",
+    "caz",
+    "casz",
+    "chz",
+    "chaz",
+    "coz",
+    "conz",
+    "consz",
+    "constz",
+    "constez",
+    "constexz",
+    "constexpz",
+    "contz",
+    "contiz",
+    "continz",
+    "continuz",
+    "dz",
+    "dez",
+    "defz",
+    "defaz",
+    "defauz",
+    "defaulz",
+    "doz",
+    "douz",
+    "doubz",
+    "doublz",
+    "ez",
+    "elz",
+    "elsz",
+    "enz",
+    "enuz",
+    "exz",
+    "extz",
+    "extez",
+    "exterz",
+    "fz",
+    "faz",
+    "falz",
+    "falsz",
+    "flz",
+    "floz",
+    "floaz",
+    "foz",
+    "gz",
+    "goz",
+    "gotz",
+    "iz",
+    "inz",
+    "inlz",
+    "inliz",
+    "inlinz",
+    "lz",
+    "loz",
+    "lonz",
+    "nz",
+    "nuz",
+    "nulz",
+    "nullz",
+    "nullpz",
+    "nullptz",
+    "rz",
+    "rez",
+    "regz",
+    "regiz",
+    "regisz",
+    "registz",
+    "registez",
+    "resz",
+    "restz",
+    "restrz",
+    "restriz",
+    "restricz",
+    "retz",
+    "retuz",
+    "returz",
+    "sz",
+    "shz",
+    "shoz",
+    "shorz",
+    "siz",
+    "sigz",
+    "signz",
+    "signez",
+    "sizz",
+    "sizez",
+    "sizeoz",
+    "stz",
+    "staz",
+    "statz",
+    "statiz",
+    "staticz",
+    "static_z",
+    "static_az",
+    "static_asz",
+    "static_assz",
+    "static_assez",
+    "static_asserz",
+    "strz",
+    "struz",
+    "strucz",
+    "swz",
+    "swiz",
+    "switz",
+    "switcz",
+    "tz",
+    "thz",
+    "thrz",
+    "threz",
+    "threaz",
+    "threadz",
+    "thread_z",
+    "thread_lz",
+    "thread_loz",
+    "thread_locz",
+    "thread_locaz",
+    "trz",
+    "truz",
+    "tyz",
+    "typz",
+    "typez",
+    "typedz",
+    "typedez",
+    "typeoz",
+    "typeofz",
+    "typeof_z",
+    "typeof_uz",
+    "typeof_unz",
+    "typeof_unqz",
+    "typeof_unquz",
+    "typeof_unquaz",
+    "uz",
+    "unz",
+    "uniz",
+    "unioz",
+    "unsz",
+    "unsiz",
+    "unsigz",
+    "unsignz",
+    "unsignez",
+    "vz",
+    "voz",
+    "voiz",
+    "volz",
+    "volaz",
+    "volatz",
+    "volatiz",
+    "volatilz",
+    "wz",
+    "whz",
+    "whiz",
+    "whilz",
+    "alignasz",
+    "alignofz",
+    "autoz",
+    "boolz",
+    "breakz",
+    "casez",
+    "charz",
+    "constz",
+    "constexprz",
+    "continuez",
+    "defaultz",
+    "doz",
+    "doublez",
+    "elsez",
+    "enumz",
+    "externz",
+    "falsez",
+    "floatz",
+    "forz",
+    "gotoz",
+    "ifz",
+    "inlinez",
+    "intz",
+    "longz",
+    "nullptrz",
+    "registerz",
+    "restrictz",
+    "returnz",
+    "shortz",
+    "signedz",
+    "sizeofz",
+    "staticz",
+    "static_assertz",
+    "structz",
+    "switchz",
+    "thread_localz",
+    "truez",
+    "typedefz",
+    "typeofz",
+    "typeof_unqualz",
+    "unionz",
+    "unsignedz",
+    "voidz",
+    "volatilez",
+    "whilez",
+    "_Alignasz",
+    "_Alignofz",
+    "_Atomicz",
+    "_BitIntz",
+    "_Boolz",
+    "_Complexz",
+    "_Decimal128z",
+    "_Decimal32z",
+    "_Decimal64z",
+    "_Genericz",
+    "_Imaginaryz",
+    "_Noreturnz",
+    "_Static_assertz",
+    "_Thread_localz",
+};
+
+TEST_P(IdentifierFixture, identtest) {
+  ASSERT_NO_FATAL_FAILURE(identifier_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, IdentifierFixture,
+                         ::testing::ValuesIn(identifiers));

@@ -20,7 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "tests.h"
+#include "tests/tests.h"
+#include <string>
 
 void GTestCaseName(std::string &TestCase, std::string &Test) {
   const ::testing::TestInfo *const info =

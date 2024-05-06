@@ -20,9 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <iostream>
 #include <list>
+#include <string>
 
-#include "tests.h"
+#include "tests/tests.h"
 
 // https://google.github.io/googletest/reference/testing.html
 

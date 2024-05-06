@@ -3965,7 +3965,6 @@ Lexeme Lexer::scan_token() {
       } else {
         print_error(std::cerr,
                     "Invalid escape sequence in character constant.\n");
-        backup(c);
         invalid();
       }
     } break;
@@ -3980,6 +3979,11 @@ Lexeme Lexer::scan_token() {
         invalid();
       case '\\':
         st = GOT_CHAR_CONST_BS;
+        break;
+      case EOF:
+        print_error(std::cerr,
+                    "Unterminated character constant detected at EOF.\n");
+        invalid();
         break;
       default:
         /* Eat c and remain in this state. */

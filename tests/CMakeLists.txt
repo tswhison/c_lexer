@@ -33,23 +33,9 @@ myproj_add_test_lib(
 
 myproj_add_test(
   TARGET
-  test_Token
-  SRCS
-  test_Token.cpp
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
-  LIBS
-  c_lexer-static
-  CXXSTD
-  17)
-
-myproj_add_test(
-  TARGET
   test_Lexer
   SRCS
   test_Lexer.cpp
-  INCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../libs
   LIBS
   c_lexer-static
   CXXSTD
