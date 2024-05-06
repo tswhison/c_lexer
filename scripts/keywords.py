@@ -72,65 +72,65 @@ keys = [
 ]
 
 tokens = [
-    'TKN_ALIGNAS',
-    'TKN_ALIGNOF',
-    'TKN_AUTO',
-    'TKN_BOOL',
-    'TKN_BREAK',
-    'TKN_CASE',
-    'TKN_CHAR',
-    'TKN_CONST',
-    'TKN_CONSTEXPR',
-    'TKN_CONTINUE',
-    'TKN_DEFAULT',
-    'TKN_DO',
-    'TKN_DOUBLE',
-    'TKN_ELSE',
-    'TKN_ENUM',
-    'TKN_EXTERN',
-    'TKN_FALSE',
-    'TKN_FLOAT',
-    'TKN_FOR',
-    'TKN_GOTO',
-    'TKN_IF',
-    'TKN_INLINE',
-    'TKN_INT',
-    'TKN_LONG',
-    'TKN_NULLPTR',
-    'TKN_REGISTER',
-    'TKN_RESTRICT',
-    'TKN_RETURN',
-    'TKN_SHORT',
-    'TKN_SIGNED',
-    'TKN_SIZEOF',
-    'TKN_STATIC',
-    'TKN_STATIC_ASSERT',
-    'TKN_STRUCT',
-    'TKN_SWITCH',
-    'TKN_THREAD_LOCAL',
-    'TKN_TRUE',
-    'TKN_TYPEDEF',
-    'TKN_TYPEOF',
-    'TKN_TYPEOF_UNQUAL',
-    'TKN_UNION',
-    'TKN_UNSIGNED',
-    'TKN_VOID',
-    'TKN_VOLATILE',
-    'TKN_WHILE',
-    'TKN__ALIGNAS',
-    'TKN__ALIGNOF',
-    'TKN__ATOMIC',
-    'TKN__BITINT',
-    'TKN__BOOL',
-    'TKN__COMPLEX',
-    'TKN__DECIMAL128',
-    'TKN__DECIMAL32',
-    'TKN__DECIMAL64',
-    'TKN__GENERIC',
-    'TKN__IMAGINARY',
-    'TKN__NORETURN',
-    'TKN__STATIC_ASSERT',
-    'TKN__THREAD_LOCAL',
+    'ALIGNAS',
+    'ALIGNOF',
+    'AUTO',
+    'BOOL',
+    'BREAK',
+    'CASE',
+    'CHAR',
+    'CONST',
+    'CONSTEXPR',
+    'CONTINUE',
+    'DEFAULT',
+    'DO',
+    'DOUBLE',
+    'ELSE',
+    'ENUM',
+    'EXTERN',
+    'FALSE',
+    'FLOAT',
+    'FOR',
+    'GOTO',
+    'IF',
+    'INLINE',
+    'INT',
+    'LONG',
+    'NULLPTR',
+    'REGISTER',
+    'RESTRICT',
+    'RETURN',
+    'SHORT',
+    'SIGNED',
+    'SIZEOF',
+    'STATIC',
+    'STATIC_ASSERT',
+    'STRUCT',
+    'SWITCH',
+    'THREAD_LOCAL',
+    'TRUE',
+    'TYPEDEF',
+    'TYPEOF',
+    'TYPEOF_UNQUAL',
+    'UNION',
+    'UNSIGNED',
+    'VOID',
+    'VOLATILE',
+    'WHILE',
+    '_ALIGNAS',
+    '_ALIGNOF',
+    '_ATOMIC',
+    '_BITINT',
+    '_BOOL',
+    '_COMPLEX',
+    '_DECIMAL128',
+    '_DECIMAL32',
+    '_DECIMAL64',
+    '_GENERIC',
+    '_IMAGINARY',
+    '_NORETURN',
+    '_STATIC_ASSERT',
+    '_THREAD_LOCAL',
 ]
 
 tknfor = {}
@@ -174,7 +174,7 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
         if (is_ident_cont(sr_->peek())) {
           st = GOT_IDENT_CONT;
         } else {
-          r(TKN_IF, 2);
+          r(Token::IF, 2);
         }
         break;
       default:
@@ -195,7 +195,7 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
         } else if (is_ident_cont(sr_->peek())) {
           st = GOT_IDENT_CONT;
         } else {
-          r(TKN_DO, 2);
+          r(Token::DO, 2);
         }
         break;
 
@@ -261,7 +261,7 @@ def generate_case_1(nxt: str):
     print('      if (is_ident_cont(sr_->peek())) {')
     print('        st = GOT_IDENT_CONT;')
     print('      } else {')
-    print(f'        r({tknfor[nxt]}, {len(nxt)});')
+    print(f'        r(Token::{tknfor[nxt]}, {len(nxt)});')
     print('      }')
 
 
@@ -271,7 +271,7 @@ def generate_case_2(collisions: Dict, nxt: str):
     print('      } else if (is_ident_cont(sr_->peek())) {')
     print('        st = GOT_IDENT_CONT;')
     print('      } else {')
-    print(f'        r({tknfor[nxt]}, {len(nxt)});')
+    print(f'        r(Token::{tknfor[nxt]}, {len(nxt)});')
     print('      }')
 
 
