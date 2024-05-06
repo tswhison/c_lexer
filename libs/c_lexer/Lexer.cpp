@@ -20,13 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <c_lexer/Lexer.h>
+
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <sstream>
 #include <utility>
 
-#include <c_lexer/Lexer.h>
+namespace c_lexer {
 
 Lexer::Lexer(SourceReader *sr) : sr_(sr), row_(1), col_(1) {
   lookahead_.push_back(scan_token());
@@ -4251,3 +4253,5 @@ std::vector<Lexeme> scan_tokens(const char *s) {
 
   return v;
 }
+
+} // namespace c_lexer

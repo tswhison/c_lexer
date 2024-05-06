@@ -22,6 +22,8 @@
 
 #include <c_lexer/Token.h>
 
+namespace c_lexer {
+
 #define s(x) #x
 
 const char *ttos[TKN_INVALID + 1] = {
@@ -145,3 +147,5 @@ const char *ttos[TKN_INVALID + 1] = {
 
     s(TKN_EOF),
     s(TKN_INVALID)};
+
+} // namespace c_lexer

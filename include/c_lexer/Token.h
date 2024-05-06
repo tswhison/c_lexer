@@ -23,6 +23,8 @@
 #pragma once
 #include <string>
 
+namespace c_lexer {
+
 enum Token {
   TKN_PLUS,  // +
   TKN_MINUS, // -
@@ -147,3 +149,5 @@ enum Token {
 };
 
 extern const char *ttos[TKN_INVALID + 1];
+
+} // namespace c_lexer

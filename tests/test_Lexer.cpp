@@ -22,6 +22,7 @@
 
 #include <c_lexer/Lexer.h>
 #include <c_lexer/Token.h>
+using namespace c_lexer;
 
 #include "tests/tests.h"
 

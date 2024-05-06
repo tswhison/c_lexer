@@ -19,15 +19,17 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 #pragma once
+
+#include <c_lexer/Token.h>
+
 #include <iostream>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
-#include <c_lexer/Token.h>
+namespace c_lexer {
 
 class Lexeme {
 public:
@@ -90,3 +92,5 @@ protected:
 };
 
 std::vector<Lexeme> scan_tokens(const char *s);
+
+} // namespace c_lexer

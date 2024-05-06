@@ -20,9 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <fstream>
-
 #include <c_lexer/Lexer.h>
+using namespace c_lexer;
+
+#include <fstream>
+#include <memory>
 
 int main(int argc, char *argv[]) {
   std::ifstream f;
