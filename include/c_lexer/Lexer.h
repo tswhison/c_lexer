@@ -24,6 +24,7 @@
 #include <c_lexer/Token.h>
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -40,6 +41,7 @@ public:
   Lexeme(const Lexeme &) = default;
   Lexeme(Lexeme &&) noexcept = default;
   Lexeme &operator=(Lexeme &&) noexcept = default;
+  ~Lexeme() = default;
 
   enum Token token() const { return token_; }
   operator enum Token() const { return token_; }
@@ -65,7 +67,8 @@ protected:
 
 class Lexer {
 public:
-  explicit Lexer(SourceReader *sr);
+  explicit Lexer(std::unique_ptr<SourceReader> &&sr);
+  ~Lexer() = default;
 
   Lexeme peek();
   Lexeme eat();
@@ -85,7 +88,7 @@ protected:
     return os;
   }
 
-  SourceReader *sr_;
+  std::unique_ptr<SourceReader> sr_;
   std::uint32_t row_;
   std::uint32_t col_;
   std::vector<Lexeme> lookahead_;

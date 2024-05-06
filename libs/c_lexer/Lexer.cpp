@@ -25,12 +25,14 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <utility>
 
 namespace c_lexer {
 
-Lexer::Lexer(SourceReader *sr) : sr_(sr), row_(1), col_(1) {
+Lexer::Lexer(std::unique_ptr<SourceReader> &&sr)
+    : sr_(std::move(sr)), row_(1), col_(1) {
   lookahead_.push_back(scan_token());
 }
 
@@ -4242,8 +4244,8 @@ Lexeme Lexer::scan_token() {
 
 std::vector<Lexeme> scan_tokens(const char *s) {
   std::stringstream stream(std::move(std::string(s)), std::ios_base::in);
-  SourceReader reader(stream);
-  Lexer lexer(&reader);
+  std::unique_ptr<SourceReader> reader = std::make_unique<SourceReader>(stream);
+  Lexer lexer(std::move(reader));
 
   std::vector<Lexeme> v;
   while (lexer.peek() != TKN_EOF) {

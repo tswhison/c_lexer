@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
 
   std::istream &in = f.is_open() ? f : std::cin;
 
-  SourceReader *reader = new SourceReader(in);
+  std::unique_ptr<SourceReader> reader = std::make_unique<SourceReader>(in);
 
-  Lexer lexer(reader);
+  Lexer lexer(std::move(reader));
 
   while (lexer.peek() != TKN_EOF) {
     Lexeme lexeme = lexer.eat();
@@ -44,8 +44,6 @@ int main(int argc, char *argv[]) {
     std::cout << lexeme.lexeme_ << " (" << lexeme.row_ << "," << lexeme.col_
               << ") : " << ttos[lexeme.token()] << '\n';
   }
-
-  delete reader;
 
   if (f.is_open())
     f.close();
