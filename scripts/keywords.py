@@ -172,13 +172,13 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT_CONT;
+          st = GOT_IDENT;
         } else {
           r(Token::IF, 2);
         }
         break;
       default:
-        hold(GOT_IDENT_CONT);
+        hold(GOT_IDENT);
         break;
       } // switch (c) for GOT_i
       break;
@@ -193,7 +193,7 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
         if (sr_->peek() == 'u') {
           st = GOT_do;
         } else if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT_CONT;
+          st = GOT_IDENT;
         } else {
           r(Token::DO, 2);
         }
@@ -202,7 +202,7 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
        ('e' omitted for brevity)
 
       default:
-        hold(GOT_IDENT_CONT);
+        hold(GOT_IDENT);
         break;
       } // switch (c) for GOT_d
     break;
@@ -216,7 +216,7 @@ def find_collisions(key: str, data: Dict, already: Set, collisions: Dict):
         st = GOT_def;
         break;
       default:
-        hold(GOT_IDENT_CONT);
+        hold(GOT_IDENT);
         break;
       } // switch (c) for GOT_de
       break;
@@ -259,7 +259,7 @@ def generate_defines(start: int, data: Dict):
 
 def generate_case_1(nxt: str):
     print('      if (is_ident_cont(sr_->peek())) {')
-    print('        st = GOT_IDENT_CONT;')
+    print('        st = GOT_IDENT;')
     print('      } else {')
     print(f'        r(Token::{tknfor[nxt]}, {len(nxt)});')
     print('      }')
@@ -269,7 +269,7 @@ def generate_case_2(collisions: Dict, nxt: str):
     print(f"      if (sr_->peek() == '{collisions[nxt]}') {{")
     print(f'        st = GOT_{nxt};')
     print('      } else if (is_ident_cont(sr_->peek())) {')
-    print('        st = GOT_IDENT_CONT;')
+    print('        st = GOT_IDENT;')
     print('      } else {')
     print(f'        r(Token::{tknfor[nxt]}, {len(nxt)});')
     print('      }')
@@ -303,7 +303,7 @@ def generate_source(data: Dict, collisions: Dict):
 
 
         print('    default:')
-        print('      hold(GOT_IDENT_CONT);')
+        print('      hold(GOT_IDENT);')
         print('      break;')
         print(f'}} // switch (c) for GOT_{i}')
         print('break;')

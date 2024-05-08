@@ -232,6 +232,33 @@ TEST_P(BasicIntegerLiteralFixture, basicinttest) {
 INSTANTIATE_TEST_SUITE_P(my, BasicIntegerLiteralFixture,
                          ::testing::ValuesIn(basic_integer));
 
+void neg_int_literal_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  EXPECT_EQ(Token::INVALID, v[0]);
+
+  if (v.size() == 3) {
+    EXPECT_EQ(Token::INVALID, v[1]);
+    EXPECT_EQ(Token::END, v[2]);
+  } else {
+    EXPECT_EQ(Token::END, v[1]);
+  }
+}
+
+class NegIntegerLiteralFixture : public ::testing::TestWithParam<const char *> {
+};
+
+const char *negative_integer[] = {
+    "0x'beef", // ' cannot appear before the first digit
+};
+
+TEST_P(NegIntegerLiteralFixture, negativeinttest) {
+  ASSERT_NO_FATAL_FAILURE(neg_int_literal_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, NegIntegerLiteralFixture,
+                         ::testing::ValuesIn(negative_integer));
+
 void integer_literal_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
 
@@ -257,6 +284,27 @@ const char *integer[] = {"0",
                          "0123456789",
                          "123456789",
 
+                         "1'",
+                         "2'",
+                         "3'",
+                         "4'",
+                         "5'",
+                         "6'",
+                         "7'",
+                         "8'",
+                         "9'",
+                         "0'123'456'789",
+                         "123'456'789",
+                         "123'u",
+                         "123'l",
+                         "123''L",
+
+                         "0xb'eef",
+                         "0xbe'ef",
+                         "0xbee'f",
+                         "0xbeef'",
+                         "0xbeef''u",
+                         "0xbeef''L",
                          "0xbeef",
                          "0xau",
                          "0xaul",
@@ -350,6 +398,13 @@ const char *integer[] = {"0",
                          "0777LLu",
                          "0777LLU",
 
+                         "0'777",
+                         "07'77u",
+                         "077'7ul",
+                         "0777''uL",
+                         "07'7'7ull",
+                         "077'7'uLL",
+
                          "\'a\'",
                          "u\'a\'",
                          "u8\'a\'",
@@ -429,26 +484,31 @@ void float_literal_test(const char *src) {
 class FloatLiteralFixture : public ::testing::TestWithParam<const char *> {};
 
 const char *floats[] = {
-    "0e1",       "0e-1",      "0E+1",     "0e-1f",    "0E-1F",     "0e+1l",
-    "12e-06L",   "0e-1df",    "0E-1dd",   "0e+1dl",   "0e-1DF",    "0E-1DD",
-    "0e+1DL",    "11e1",      "11e-5",    "11e1f",    "11e-5F",    "11e1l",
-    "11e-5L",    "11e1df",    "11e-5dd",  "11e1dl",   "11e1DF",    "11e-5DD",
-    "11e1DL",
+    "123'e1",   "123'.",     "123'e1'2'3''",
 
-    ".11",       ".11f",      ".11F",     ".11l",     ".11L",      ".11df",
-    ".11dd",     ".11dl",     ".11DF",    ".11DD",    ".11DL",     ".11e1f",
-    ".11e-5F",   ".11e1l",    ".11e-5L",  ".11e1df",  ".11e-5dd",  ".11e1dl",
-    ".11e1DF",   ".11e-5DD",  ".11e1DL",
+    "0e1",      "07e2",      "07.",          "0e-1",      "0E+1",
+    "0e-1f",    "0E-1F",     "0e+1l",        "12e-06L",   "0e-1df",
+    "0E-1dd",   "0e+1dl",    "0e-1DF",       "0E-1DD",    "0e+1DL",
+    "11e1",     "11e-5",     "11e1f",        "11e-5F",    "11e1l",
+    "11e-5L",   "11e1df",    "11e-5dd",      "11e1dl",    "11e1DF",
+    "11e-5DD",  "11e1DL",
 
-    "3.11",      "3.11f",     "3.11F",    "3.11l",    "3.11L",     "3.11df",
-    "3.11dd",    "3.11dl",    "3.11DF",   "3.11DD",   "3.11DL",    "3.11e1f",
-    "3.11e-5F",  "3.11e1l",   "3.11e-5L", "3.11e1df", "3.11e-5dd", "3.11e1dl",
-    "3.11e1DF",  "3.11e-5DD", "3.11e1DL",
+    ".11",      ".11f",      ".11F",         ".11l",      ".11L",
+    ".11df",    ".11dd",     ".11dl",        ".11DF",     ".11DD",
+    ".11DL",    ".11e1f",    ".11e-5F",      ".11e1l",    ".11e-5L",
+    ".11e1df",  ".11e-5dd",  ".11e1dl",      ".11e1DF",   ".11e-5DD",
+    ".11e1DL",
 
-    "0.",        "12.",       "12.e5",    "12.E+5dl", "34.e-05L",  "67543.E6",
-    "0.E1dd",    "0.0e-1",    "0.01E+1",  "0.0e-1f",  "0.0E-1F",   "0.0e+1l",
-    "12.0e-06L", "0.0e-1df",  "0.0E-1dd", "0.0e+1dl", "0.0e-1DF",  "0.0E-1DD",
-    "0.0e+1DL",
+    "3.11",     "3.11f",     "3.11F",        "3.11l",     "3.11L",
+    "3.11df",   "3.11dd",    "3.11dl",       "3.11DF",    "3.11DD",
+    "3.11DL",   "3.11e1f",   "3.11e-5F",     "3.11e1l",   "3.11e-5L",
+    "3.11e1df", "3.11e-5dd", "3.11e1dl",     "3.11e1DF",  "3.11e-5DD",
+    "3.11e1DL",
+
+    "0.",       "12.",       "0.L",          "12.e5",     "12.E+5dl",
+    "34.e-05L", "67543.E6",  "0.E1dd",       "0.0e-1",    "0.01E+1",
+    "0.0e-1f",  "0.0E-1F",   "0.0e+1l",      "12.0e-06L", "0.0e-1df",
+    "0.0E-1dd", "0.0e+1dl",  "0.0e-1DF",     "0.0E-1DD",  "0.0e+1DL",
 };
 
 TEST_P(FloatLiteralFixture, floattest) {
@@ -456,6 +516,81 @@ TEST_P(FloatLiteralFixture, floattest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(my, FloatLiteralFixture, ::testing::ValuesIn(floats));
+
+class HexFloatLiteralFixture : public ::testing::TestWithParam<const char *> {};
+
+const char *hex_floats[] = {
+    "0x.bp-3f",   "0x.1p-5F",
+
+    "0xa.bp+1l",  "0xa.P2F",
+
+    "0x1p1",      "0x1p-1",     "0x1P+1",      "0x0p-1f",     "0x0P-1F",
+    "0x0p+1l",    "0x12p-06L",  "0x0p-1L",     "0x0P-1f",     "0x0p+1f",
+    "0x1p-1L",    "0x0P-1l",    "0x0p+1L",     "0x1p1",       "0x1p-5",
+    "0x1p1f",     "0x1p-5F",    "0x1p1l",      "0x1p-5L",     "0x1p1L",
+    "0x1p-5L",
+
+    "0x.11p1f",   "0x.11p-5F",  "0x.11p1l",    "0x.11p-5L",   "0x3.11p1f",
+    "0x3.11p-5F", "0x3.11p1l",  "0x3.11p-5L",
+
+    "0x12.p5",    "0x34.p-05L", "0x67543.P6",  "0x.0p-1",     "0x.01P+1",
+    "0x.0p-1f",   "0x.0P-1F",   "0x.0p+1l",    "0x12.0p-06L",
+
+    "0x.b'cp-3f", "0x.1'2p-5F", "0x.1'2'p-5F", "0xab''.3p2f", "0xab''p2f",
+};
+
+TEST_P(HexFloatLiteralFixture, hexfloattest) {
+  ASSERT_NO_FATAL_FAILURE(float_literal_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, HexFloatLiteralFixture,
+                         ::testing::ValuesIn(hex_floats));
+
+void neg_hex_float_literal_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  EXPECT_EQ(Token::INVALID, v[0]);
+
+  if (v.size() == 3) {
+    EXPECT_EQ(Token::IDENTIFIER, v[1]);
+    EXPECT_EQ(Token::END, v[2]);
+  } else {
+    EXPECT_EQ(Token::END, v[1]);
+  }
+}
+
+class NegHexFloatLiteralFixture
+    : public ::testing::TestWithParam<const char *> {};
+
+const char *negative_hex_floats[] = {
+    "0x.p3f", // No hex digits in mantissa
+
+    "0x1.p",   // No digits in exponent
+    "0x1.pf",  // No digits in exponent
+    "0x1.p+",  // No digits in exponent
+    "0x1.p-f", // No digits in exponent
+
+    // No exponent field
+    "0x1.",
+    "0x12.",
+    "0x.11",
+    "0x.11f",
+    "0x.11F",
+    "0x.11l",
+    "0x.11L",
+    "0x3.11",
+    "0x3.11f",
+    "0x3.11F",
+    "0x3.11l",
+    "0x3.11L",
+};
+
+TEST_P(NegHexFloatLiteralFixture, neghexfloattest) {
+  ASSERT_NO_FATAL_FAILURE(neg_hex_float_literal_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, NegHexFloatLiteralFixture,
+                         ::testing::ValuesIn(negative_hex_floats));
 
 void neg_float_literal_test(const char *src) {
   std::vector<Lexeme> v = scan_tokens(src);
@@ -613,6 +748,20 @@ TEST(IdentThenInvalid, test) {
   std::vector<Lexeme> v = scan_tokens(src);
 
 #define su(x) static_cast<std::uint32_t>(x)
+
+  ASSERT_EQ(su(2), v.size());
+
+  EXPECT_EQ(Token::IDENTIFIER, v[0]);
+  EXPECT_EQ(su(1), v[0].row_);
+  EXPECT_EQ(su(1), v[0].col_);
+
+  EXPECT_EQ(Token::END, v[1]);
+  EXPECT_EQ(su(1), v[1].row_);
+  EXPECT_EQ(su(3), v[1].col_);
+
+  const char *src2 = "x$";
+
+  v = scan_tokens(src2);
 
   ASSERT_EQ(su(2), v.size());
 
@@ -1097,6 +1246,10 @@ const char *identifiers[] = {
     "_Noreturnz",
     "_Static_assertz",
     "_Thread_localz",
+
+    "Uj",
+    "u8j",
+    "sin",
 };
 
 TEST_P(IdentifierFixture, identtest) {
