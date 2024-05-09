@@ -20,15 +20,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "shared/slib.h"
-#include "tests.h"
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
 
-int mycxxapp_main(int argc, char *argv[]);
+#include "tests/tests.h"
 
-TEST(mycxxapp, Success0) {
+int c_lexview_main(int argc, char *argv[]);
+
+TEST(c_lexview, test) {
   int argc = 1;
-  char app[] = {'m', 'y', 'c', 'x', 'x', 'a', 'p', 'p', 0};
-  char *argv[1] = {app};
+  char app[] = {'c', '_', 'l', 'e', 'x', 'v', 'i', 'e', 'w', 0};
+  char *argv[2] = {app, nullptr};
 
-  EXPECT_EQ(mycxxapp_main(argc, argv), 0);
+  std::istringstream iss("int main(void)");
+  std::streambuf *sb_save = std::cin.rdbuf();
+  std::cin.rdbuf(iss.rdbuf());
+
+  EXPECT_EQ(c_lexview_main(argc, argv), 0);
+
+  std::cin.rdbuf(sb_save);
+
+  char tmpfile[32];
+  std::strcpy(tmpfile, "tmptest-XXXXXX.c");
+  std::ofstream tmpout(tmpfile);
+  tmpout.write("{ return 0; }\n", 14);
+  tmpout.close();
+
+  argv[1] = tmpfile;
+  argc = 2;
+  EXPECT_EQ(c_lexview_main(argc, argv), 0);
+
+  unlink(tmpfile);
 }

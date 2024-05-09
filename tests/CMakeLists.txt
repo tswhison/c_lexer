@@ -40,3 +40,24 @@ myproj_add_test(
   c_lexer-static
   CXXSTD
   17)
+
+myproj_add_test_lib(
+  TARGET
+  main-static
+  SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../app/main.cpp
+  DEFS
+  main=c_lexview_main
+  CXXSTD
+  17)
+
+myproj_add_test(
+  TARGET
+  test_c_lexview
+  SRCS
+  test_main.cpp
+  LIBS
+  main-static
+  c_lexer-static
+  CXXSTD
+  17)
