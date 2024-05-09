@@ -23,6 +23,7 @@
 #include <c_lexer/Lexer.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <memory>
@@ -106,6 +107,10 @@ Lexeme Lexer::eat() {
 inline bool is_ident_start(char c) { return std::isalpha(c) || c == '_'; }
 
 inline bool is_ident_cont(char c) { return std::isalnum(c) || c == '_'; }
+
+inline bool is_int_suffix_start(char c) {
+  return std::strchr("uUlLwW", c) != NULL;
+}
 
 #define START 0
 
@@ -363,8 +368,6 @@ inline bool is_ident_cont(char c) { return std::isalnum(c) || c == '_'; }
 #define GOT_INT_LITERAL 301
 #define GOT_HEX_LITERAL 302
 #define GOT_OCT_LITERAL 303
-#define GOT_INT_SUFFIX_START_u 304
-#define GOT_INT_SUFFIX_START_l 305
 
 #define GOT_U 306
 #define GOT_L 307
@@ -393,7 +396,18 @@ inline bool is_ident_cont(char c) { return std::isalnum(c) || c == '_'; }
 #define GOT_HEX_CONST_DOT 326
 #define GOT_HEX_CONST_DOT_XDIGIT 327
 
-#define GOT_IDENT 998
+#define GOT_BIN_CONST_START 328
+#define GOT_BIN_CONST_CONT 329
+
+#define GOT_INT_SUFFIX_START 330
+#define GOT_INT_SUFFIX_u 331
+#define GOT_INT_SUFFIX_U 332
+#define GOT_INT_SUFFIX_l 333
+#define GOT_INT_SUFFIX_L 334
+#define GOT_INT_SUFFIX_w 335
+#define GOT_INT_SUFFIX_W 336
+
+#define GOT_IDENT 999
 
 #define THE_END 1000
 
@@ -574,6 +588,8 @@ Lexeme Lexer::scan_token() {
         const char peek = sr_->peek();
         if (peek == 'x' || peek == 'X') {
           munch_to_state(GOT_0x);
+        } else if (peek == 'b' || peek == 'B') {
+          munch_to_state(GOT_BIN_CONST_START);
         } else {
           st = GOT_OCT_LITERAL;
         }
@@ -3764,10 +3780,8 @@ Lexeme Lexer::scan_token() {
       if (isdig && std::isdigit(peek)) {
         // Eat c and remain in this state.
       } else if (isdig) {
-        if (peek == 'u' || peek == 'U') {
-          munch_to_state(GOT_INT_SUFFIX_START_u);
-        } else if (peek == 'l' || peek == 'L') {
-          munch_to_state(GOT_INT_SUFFIX_START_l);
+        if (is_int_suffix_start(peek)) {
+          st = GOT_INT_SUFFIX_START;
         } else if (peek == 'e' || peek == 'E') {
           munch_to_state(GOT_FLOAT_CONST_e);
         } else if (peek == '.') {
@@ -3778,10 +3792,8 @@ Lexeme Lexer::scan_token() {
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
-      } else if (c == 'u' || c == 'U') {
-        st = GOT_INT_SUFFIX_START_u;
-      } else if (c == 'l' || c == 'L') {
-        st = GOT_INT_SUFFIX_START_l;
+      } else if (is_int_suffix_start(c)) {
+        hold(GOT_INT_SUFFIX_START);
       } else if (c == 'e' || c == 'E') {
         st = GOT_FLOAT_CONST_e;
       } else if (c == '.') {
@@ -3800,10 +3812,8 @@ Lexeme Lexer::scan_token() {
       if (c == '\'' || (isoct && (peek >= '0' && peek <= '7'))) {
         // Eat c and remain in this state.
       } else if (isoct) {
-        if (peek == 'u' || peek == 'U') {
-          munch_to_state(GOT_INT_SUFFIX_START_u);
-        } else if (peek == 'l' || peek == 'L') {
-          munch_to_state(GOT_INT_SUFFIX_START_l);
+        if (is_int_suffix_start(peek)) {
+          st = GOT_INT_SUFFIX_START;
         } else if (peek == 'e' || peek == 'E') {
           munch_to_state(GOT_FLOAT_CONST_e);
         } else if (peek == '.') {
@@ -3815,10 +3825,8 @@ Lexeme Lexer::scan_token() {
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
-      } else if (c == 'u' || c == 'U') {
-        st = GOT_INT_SUFFIX_START_u;
-      } else if (c == 'l' || c == 'L') {
-        st = GOT_INT_SUFFIX_START_l;
+      } else if (is_int_suffix_start(c)) {
+        hold(GOT_INT_SUFFIX_START);
       } else if (c == 'e' || c == 'E') {
         st = GOT_FLOAT_CONST_e;
       } else if (c == '.') {
@@ -3837,7 +3845,7 @@ Lexeme Lexer::scan_token() {
       } else {
         print_error(
             std::cerr,
-            " Hexadecimal prefix must be followed by a hexadecimal digit.\n");
+            "Hexadecimal prefix must be followed by a hexadecimal digit.\n");
         backup(c);
         invalid();
       }
@@ -3847,7 +3855,7 @@ Lexeme Lexer::scan_token() {
       if (std::isxdigit(c)) {
         st = GOT_HEX_CONST_DOT_XDIGIT;
       } else {
-        print_error(std::cerr, " Missing digits in hexadecimal constant.\n");
+        print_error(std::cerr, "Missing digits in hexadecimal constant.\n");
         backup(c);
         invalid();
       }
@@ -3859,10 +3867,8 @@ Lexeme Lexer::scan_token() {
       if (isxdig && std::isxdigit(peek)) {
         // Eat c and remain in this state.
       } else if (isxdig) {
-        if (peek == 'u' || peek == 'U') {
-          munch_to_state(GOT_INT_SUFFIX_START_u);
-        } else if (peek == 'l' || peek == 'L') {
-          munch_to_state(GOT_INT_SUFFIX_START_l);
+        if (is_int_suffix_start(peek)) {
+          st = GOT_INT_SUFFIX_START;
         } else if (peek == '.') {
           munch_to_state(GOT_HEX_CONST_DOT);
         } else if (peek == 'p' || peek == 'P') {
@@ -3872,10 +3878,8 @@ Lexeme Lexer::scan_token() {
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
-      } else if (c == 'u' || c == 'U') {
-        st = GOT_INT_SUFFIX_START_u;
-      } else if (c == 'l' || c == 'L') {
-        st = GOT_INT_SUFFIX_START_l;
+      } else if (is_int_suffix_start(c)) {
+        hold(GOT_INT_SUFFIX_START);
       } else if (c == '.') {
         st = GOT_HEX_CONST_DOT;
       } else if (c == 'p' || c == 'P') {
@@ -3886,41 +3890,6 @@ Lexeme Lexer::scan_token() {
         backup(c);
         r(Token::INTEGER_LIT, lex.length());
       }
-    } break;
-
-    case GOT_INT_SUFFIX_START_u: {
-      const char peek = sr_->peek();
-      switch (c) {
-      case 'l':
-      case 'L':
-        if (peek == 'l' || peek == 'L') {
-          munch();
-          r(Token::INTEGER_LIT, lex.length());
-        }
-        r(Token::INTEGER_LIT, lex.length());
-      default:
-        backup(c);
-        r(Token::INTEGER_LIT, lex.length());
-      } // switch (c) for GOT_INT_SUFFIX_START_u
-    } break;
-
-    case GOT_INT_SUFFIX_START_l: {
-      const char peek = sr_->peek();
-      switch (c) {
-      case 'u':
-      case 'U':
-        r(Token::INTEGER_LIT, lex.length());
-      case 'l':
-      case 'L':
-        if (peek == 'u' || peek == 'U') {
-          munch();
-          r(Token::INTEGER_LIT, lex.length());
-        }
-        r(Token::INTEGER_LIT, lex.length());
-      default:
-        backup(c);
-        r(Token::INTEGER_LIT, lex.length());
-      } // switch (c) for GOT_INT_SUFFIX_START_l
     } break;
 
     case GOT_CHAR_CONST_START:
@@ -3962,17 +3931,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '\'':
         r(Token::INTEGER_LIT, lex.length());
+      case EOF:
       case '\n':
         print_error(std::cerr, "Unterminated character constant detected.\n");
         backup(c);
         invalid();
       case '\\':
         st = GOT_CHAR_CONST_BS;
-        break;
-      case EOF:
-        print_error(std::cerr,
-                    "Unterminated character constant detected at EOF.\n");
-        invalid();
         break;
       default:
         // Eat c and remain in this state.
@@ -4149,7 +4114,7 @@ Lexeme Lexer::scan_token() {
       } else {
         print_error(
             std::cerr,
-            " Hexadecimal floating-point constant missing exponent field.\n");
+            "Hexadecimal floating-point constant missing exponent field.\n");
         backup(c);
         invalid();
       }
@@ -4162,7 +4127,7 @@ Lexeme Lexer::scan_token() {
       case 'P':
         st = GOT_HEX_CONST_p;
         break;
-      case '\'': // Remain in this state and eat c.
+      case '\'': // Eat c and remain in this state.
         break;
       default:
         if (std::isxdigit(c)) {
@@ -4170,7 +4135,7 @@ Lexeme Lexer::scan_token() {
         } else {
           print_error(
               std::cerr,
-              " Hexadecimal floating-point constant missing exponent field.\n");
+              "Hexadecimal floating-point constant missing exponent field.\n");
           backup(c);
           invalid();
         }
@@ -4227,95 +4192,298 @@ Lexeme Lexer::scan_token() {
       }
       break;
 
-      /*
+    case GOT_BIN_CONST_START:
+      switch (c) {
+      case '0':
+      case '1':
+        st = GOT_BIN_CONST_CONT;
+        break;
+      default:
+        print_error(std::cerr, "Binary constant must begin with a 0 or 1.\n");
+        backup(c);
+        invalid();
+        break;
+      } // switch (c) for GOT_BIN_CONST
+      break;
 
-        Floating Point
+    case GOT_BIN_CONST_CONT:
+      if (is_int_suffix_start(c)) {
+        hold(GOT_INT_SUFFIX_START);
+      } else if (c == '0' || c == '1' || c == '\'') {
+        // Eat c and remain in this state.
+      } else {
+        backup(c);
+        r(Token::INTEGER_LIT, lex.length());
+      }
+      break;
 
-        D = 0 .. 9
+    case GOT_INT_SUFFIX_START:
+      switch (c) {
+      case 'u':
+        st = GOT_INT_SUFFIX_u;
+        break;
+      case 'U':
+        st = GOT_INT_SUFFIX_U;
+        break;
+      case 'l':
+        st = GOT_INT_SUFFIX_l;
+        break;
+      case 'L':
+        st = GOT_INT_SUFFIX_L;
+        break;
+      case 'w':
+        st = GOT_INT_SUFFIX_w;
+        break;
+      case 'W':
+        st = GOT_INT_SUFFIX_W;
+        break;
+      } // switch (c) for GOT_INT_SUFFIX_START
+      break;
 
-        Exponent
-        E = [Ee][+-]?{D}+
+    case GOT_INT_SUFFIX_u: { // ul ull uL uLL uwb uWB
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'l':
+        if (peek == 'l')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'L':
+        if (peek == 'L')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'w':
+        if (peek == 'b') {
+          munch();
+          r(Token::INTEGER_LIT, lex.length());
+        }
+        break;
+      case 'W':
+        if (peek == 'B') {
+          munch();
+          r(Token::INTEGER_LIT, lex.length());
+        }
+        break;
+      } // switch (c) for GOT_INT_SUFFIX_u
+      print_error(std::cerr, "Invalid integer suffix after u.\n");
+      invalid();
+    } break;
 
-        Floating point Suffix
-        FS = f F l L df dd dl DF DD DL
+    case GOT_INT_SUFFIX_U: { // Ul Ull UL ULL Uwb UWB
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'l':
+        if (peek == 'l')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'L':
+        if (peek == 'L')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'w':
+        if (peek == 'b') {
+          munch();
+          r(Token::INTEGER_LIT, lex.length());
+        }
+        break;
+      case 'W':
+        if (peek == 'B') {
+          munch();
+          r(Token::INTEGER_LIT, lex.length());
+        }
+        break;
+      } // switch (c) for GOT_INT_SUFFIX_U
+      print_error(std::cerr, "Invalid integer suffix after U.\n");
+      invalid();
+    } break;
 
-        {D}+{E}{FS}?
-          1e-10L 1E3F
+    case GOT_INT_SUFFIX_l: { // l lu lU ll llu llU
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'l':
+        if (peek == 'u' || peek == 'U')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'u':
+      case 'U':
+        r(Token::INTEGER_LIT, lex.length());
+      default:
+        backup(c);
+        r(Token::INTEGER_LIT, lex.length());
+      } // switch (c) for GOT_INT_SUFFIX_l
+    } break;
 
-        H = [0-9a-fA-F]
-        HE = [pP][+-]?{D}+
+    case GOT_INT_SUFFIX_L: { // L Lu LU LL LLu LLU
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'L':
+        if (peek == 'u' || peek == 'U')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      case 'u':
+      case 'U':
+        r(Token::INTEGER_LIT, lex.length());
+      default:
+        backup(c);
+        r(Token::INTEGER_LIT, lex.length());
+      } // switch (c) for GOT_INT_SUFFIX_L
+    } break;
 
-        0[xX]{H}+[']?[.]{H}*[pP][+-]?{D}+
+    case GOT_INT_SUFFIX_w: { // wb wbu wbU
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'b':
+        if (peek == 'u' || peek == 'U')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      default:
+        print_error(std::cerr, "Invalid integer suffix after w.\n");
+        invalid();
+      } // switch (c) for GOT_INT_SUFFIX_w
+    } break;
+
+    case GOT_INT_SUFFIX_W: { // WB WBu WBU
+      const int peek = sr_->peek();
+      switch (c) {
+      case 'B':
+        if (peek == 'u' || peek == 'U')
+          munch();
+        r(Token::INTEGER_LIT, lex.length());
+      default:
+        print_error(std::cerr, "Invalid integer suffix after W.\n");
+        invalid();
+      } // switch (c) for GOT_INT_SUFFIX_W
+    } break;
+
+    /*
+      String Literals
+
+      encoding-prefix: u8 u U L
+
+      string-literal:  encoding-prefix(opt) " s-char-sequence(opt) "
+
+      s-char-sequence: s-char
+                       s-char-sequence s-char
+
+      s-char: (any member of the source character set except ", \, or \n.)
+              escape-sequence
+
+      escape-sequence:  simple-escape-sequence
+                        octal-escape-sequence
+                        hexadecimal-escape-sequence
+                        universal-character-name
+
+      simple-escape-sequence: \' \" \? \\ \a \b \f \n \r \t \v
+
+      octal-escape-sequence: \ octal-digit
+                             \ octal-digit octal-digit
+                             \ octal-digit octal-digit octal-digit
+
+      hexadecimal-escape-sequence: \x hexadecimal-digit
+                             hexadecimal-escape-sequence hexadecimal-digit
+
+      universal-character-name: \u hex-quad
+                                \U hex-quad hex-quad
+
+      hex-quad: hdigit hdigit hdigit hdigit
 
 
 
-        Character Constants
+      Binary Constants
 
-          Character Prefix
-          CP = u8 u U L
+      binary-prefix: 0b 0B
 
-          [^'\\\n] = anything except '\'', '\\', and '\n'
+      binary-digit: 0 1
 
-          Escape Sequence
-          ES = (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+      binary-constant: binary-prefix binary-digit
+                       binary-constant '(opt) binary-digit
 
-          Char Const
-          {CP}?"'"([^'\\\n]|{ES})+"'"
+      integer-suffix: ul uL Ul UL
+                      ull uLL Ull ULL
+                      uwb uWB Uwb UWB
+                      l L lu lU Lu LU
+                      ll LL llu llU LLu LLU
+                      wb WB wbu wbU WBu WBU
 
-          'a' u'a'
-          U'\'' L'\"' '\?' U'\\' L'\a' L'\b' u'\f' U'\n' L'\r' u'\t' U'\v'
-          u'\7' U'\777' 'u\xbeef'
 
-        Integer literals:
 
-          Integer Suffix
-          IS = u  ul  uL  ull  uLL -or-
-               U  Ul  UL  Ull  ULL -or-
-               l  lu  lU -or-
-               L  Lu  LU -or-
-               ll llu llU -or-
-               LL LLu LLU
+      Floating Point
 
-          Digit
-          D = [0-9]
+      D = 0 .. 9
 
-          Non-zero Digit
-          NZ = [1-9]
+      Exponent
+      E = [Ee][+-]?{D}+
 
-          Octal Digit
-          O = [0-7]
+      Floating point Suffix
+      FS = f F l L df dd dl DF DD DL
 
-          CP = u U L
+      {D}+{E}{FS}?
+        1e-10L 1E3F
 
-        A) Decimal
+      H = [0-9a-fA-F]
+      HE = [pP][+-]?{D}+
 
-            {NZ}{D}*{IS}?
+      0[xX]{H}+[']?[.]{H}*[pP][+-]?{D}+
 
-        B) Hexadecimal
-          Hex Prefix
-          HP = 0x or 0X
-          H  = [a-fA-F0-9]
 
-            {HP}{H}+{IS}?
 
-        C) Octal
+      Character Constants
 
-          0{O}*{IS}?
+        Character Prefix
+        CP = u8 u U L
 
-      */
+        [^'\\\n] = anything except '\'', '\\', and '\n'
+
+        Escape Sequence
+        ES = (\\(['"\?\\abfnrtv]|[0-7]{1,3}|x[a-fA-F0-9]+))
+
+        Char Const
+        {CP}?"'"([^'\\\n]|{ES})+"'"
+
+        'a' u'a'
+        U'\'' L'\"' '\?' U'\\' L'\a' L'\b' u'\f' U'\n' L'\r' u'\t' U'\v'
+        u'\7' U'\777' 'u\xbeef'
+
+      Integer literals:
+
+        Integer Suffix
+        IS = u  ul  uL  ull  uLL -or-
+             U  Ul  UL  Ull  ULL -or-
+             l  lu  lU -or-
+             L  Lu  LU -or-
+             ll llu llU -or-
+             LL LLu LLU
+
+        Digit
+        D = [0-9]
+
+        Non-zero Digit
+        NZ = [1-9]
+
+        Octal Digit
+        O = [0-7]
+
+        CP = u U L
+
+      A) Decimal
+
+          {NZ}{D}*{IS}?
+
+      B) Hexadecimal
+        Hex Prefix
+        HP = 0x or 0X
+        H  = [a-fA-F0-9]
+
+          {HP}{H}+{IS}?
+
+      C) Octal
+
+        0{O}*{IS}?
+
+    */
     default:
       invalid();
     }
   }
-
-  /*
-
-  IDENTIFIER,
-  INTEGER_LIT, // 123  0xbeef  'x'
-  FLOAT_LIT,   // 3.14
-  STRING_LIT,  // "abc"
-
-  */
 
   invalid();
 }
