@@ -28,6 +28,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stack>
 #include <utility>
 
 namespace c_lexer {
@@ -79,6 +80,8 @@ Lexeme Lexer::eat() {
     return Lexeme(std::move(lex), _tkn, row_, col_ - (_cols));                 \
   } while (0)
 
+#define rinvalid() r(Token::INVALID, lex.length())
+
 #define backup(_ch)                                                            \
   do {                                                                         \
     if ((_ch) != EOF) {                                                        \
@@ -87,21 +90,42 @@ Lexeme Lexer::eat() {
     }                                                                          \
   } while (0)
 
-#define hold(_s)                                                               \
+#define nextst(_s)                                                             \
+  do {                                                                         \
+    st = _s;                                                                   \
+  } while (0)
+
+#define holdst(_s)                                                             \
   do {                                                                         \
     _hold = true;                                                              \
-    st = _s;                                                                   \
+    nextst(_s);                                                                \
   } while (0)
 
-#define munch_to_state(_s)                                                     \
+#define advance() lex.push_back(sr_->get())
+
+#define advancest(_s)                                                          \
   do {                                                                         \
-    lex.push_back(sr_->get());                                                 \
-    st = _s;                                                                   \
+    advance();                                                                 \
+    nextst(_s);                                                                \
   } while (0)
 
-#define munch() lex.push_back(sr_->get())
+#define pushst(_s)                                                             \
+  do {                                                                         \
+    states.push(st);                                                           \
+    nextst(_s);                                                                \
+  } while (0)
 
-#define invalid() r(Token::INVALID, lex.length())
+#define popst()                                                                \
+  do {                                                                         \
+    nextst(states.top());                                                      \
+    states.pop();                                                              \
+  } while (0)
+
+#define pop_holdst()                                                           \
+  do {                                                                         \
+    popst();                                                                   \
+    _hold = true;                                                              \
+  } while (0)
 
 // C identifier names start with [a-zA-Z_] and continue with [a-zA-Z_0-9]
 inline bool is_ident_start(char c) { return std::isalpha(c) || c == '_'; }
@@ -225,7 +249,6 @@ is_simple_escape_sequence(char c) { // c is the char after the backslash
 #define GOT_co 103
 #define GOT_con 104
 #define GOT_cons 105
-// #define GOT_const 106
 #define GOT_conste 107
 #define GOT_constex 108
 #define GOT_constexp 109
@@ -239,7 +262,6 @@ is_simple_escape_sequence(char c) { // c is the char after the backslash
 #define GOT_defa 117
 #define GOT_defau 118
 #define GOT_defaul 119
-// #define GOT_do 120
 #define GOT_dou 121
 #define GOT_doub 122
 #define GOT_doubl 123
@@ -307,7 +329,6 @@ is_simple_escape_sequence(char c) { // c is the char after the backslash
 #define GOT_sta 185
 #define GOT_stat 186
 #define GOT_stati 187
-// #define GOT_static 188
 #define GOT_static_ 189
 #define GOT_static_a 190
 #define GOT_static_as 191
@@ -340,7 +361,6 @@ is_simple_escape_sequence(char c) { // c is the char after the backslash
 #define GOT_typed 218
 #define GOT_typede 219
 #define GOT_typeo 220
-// #define GOT_typeof 221
 #define GOT_typeof_ 222
 #define GOT_typeof_u 223
 #define GOT_typeof_un 224
@@ -374,62 +394,58 @@ is_simple_escape_sequence(char c) { // c is the char after the backslash
 #define GOT_HEX_LITERAL 302
 #define GOT_OCT_LITERAL 303
 
-#define GOT_U 306
-#define GOT_L 307
-#define GOT_CHAR_CONST_START 308
-#define GOT_CHAR_CONST_CONT 309
-#define GOT_CHAR_CONST_BS 310
-#define GOT_CHAR_CONST_BS_OCT 311
-#define GOT_CHAR_CONST_BS_OCT2 312
-#define GOT_CHAR_CONST_BS_OCT3 313
-#define GOT_CHAR_CONST_BS_x 314
+#define GOT_U 304
+#define GOT_L 305
+#define GOT_CHAR_CONST_START 306
+#define GOT_CHAR_CONST_CONT 307
 
-#define GOT_FLOAT_CONST_e 315
-#define GOT_FLOAT_CONST_e_SIGN 316
-#define GOT_FLOAT_CONST_e_SIGN_DIG 317
-#define GOT_FLOAT_CONST_e_SUFd 318
-#define GOT_FLOAT_CONST_e_SUFD 319
+#define GOT_FLOAT_CONST_e 308
+#define GOT_FLOAT_CONST_e_SIGN 309
+#define GOT_FLOAT_CONST_e_SIGN_DIG 310
+#define GOT_FLOAT_CONST_e_SUFd 311
+#define GOT_FLOAT_CONST_e_SUFD 312
 
-#define GOT_FLOAT_CONST_DOT 320
-#define GOT_FLOAT_CONST_DOT_DIGIT 321
+#define GOT_FLOAT_CONST_DOT 313
+#define GOT_FLOAT_CONST_DOT_DIGIT 314
 
-#define GOT_0x_DOT 322
-#define GOT_HEX_CONST_p 323
-#define GOT_HEX_CONST_p_SIGN 324
-#define GOT_HEX_CONST_p_SIGN_DIG 325
+#define GOT_0x_DOT 315
+#define GOT_HEX_CONST_p 316
+#define GOT_HEX_CONST_p_SIGN 317
+#define GOT_HEX_CONST_p_SIGN_DIG 318
 
-#define GOT_HEX_CONST_DOT 326
-#define GOT_HEX_CONST_DOT_XDIGIT 327
+#define GOT_HEX_CONST_DOT 319
+#define GOT_HEX_CONST_DOT_XDIGIT 320
 
-#define GOT_BIN_CONST_START 328
-#define GOT_BIN_CONST_CONT 329
+#define GOT_BIN_CONST_START 321
+#define GOT_BIN_CONST_CONT 322
 
-#define GOT_INT_SUFFIX_START 330
-#define GOT_INT_SUFFIX_u 331
-#define GOT_INT_SUFFIX_U 332
-#define GOT_INT_SUFFIX_l 333
-#define GOT_INT_SUFFIX_L 334
-#define GOT_INT_SUFFIX_w 335
-#define GOT_INT_SUFFIX_W 336
+#define GOT_INT_SUFFIX_START 323
+#define GOT_INT_SUFFIX_u 324
+#define GOT_INT_SUFFIX_U 325
+#define GOT_INT_SUFFIX_l 326
+#define GOT_INT_SUFFIX_L 327
+#define GOT_INT_SUFFIX_w 328
+#define GOT_INT_SUFFIX_W 329
 
-#define GOT_STRING_LIT_START 337
-#define GOT_STRING_LIT_BS 338
-#define GOT_STRING_LIT_BS_OCT1 339
-#define GOT_STRING_LIT_BS_OCT2 340
-#define GOT_STRING_LIT_BS_x 341
-#define GOT_STRING_LIT_BS_x_XDIGIT 342
-#define GOT_STRING_LIT_BS_u0 343
-#define GOT_STRING_LIT_BS_u1 344
-#define GOT_STRING_LIT_BS_u2 345
-#define GOT_STRING_LIT_BS_u3 346
-#define GOT_STRING_LIT_BS_U0 347
-#define GOT_STRING_LIT_BS_U1 348
-#define GOT_STRING_LIT_BS_U2 349
-#define GOT_STRING_LIT_BS_U3 350
-#define GOT_STRING_LIT_BS_U4 351
-#define GOT_STRING_LIT_BS_U5 352
-#define GOT_STRING_LIT_BS_U6 353
-#define GOT_STRING_LIT_BS_U7 354
+#define GOT_STRING_LIT_START 330
+
+#define GOT_ESCAPE_SEQUENCE 331
+#define GOT_ESCAPE_SEQUENCE_BS_OCT1 332
+#define GOT_ESCAPE_SEQUENCE_BS_OCT2 333
+#define GOT_ESCAPE_SEQUENCE_BS_x 334
+#define GOT_ESCAPE_SEQUENCE_BS_x_XDIGIT 335
+#define GOT_ESCAPE_SEQUENCE_BS_u0 336
+#define GOT_ESCAPE_SEQUENCE_BS_u1 337
+#define GOT_ESCAPE_SEQUENCE_BS_u2 338
+#define GOT_ESCAPE_SEQUENCE_BS_u3 339
+#define GOT_ESCAPE_SEQUENCE_BS_U0 340
+#define GOT_ESCAPE_SEQUENCE_BS_U1 341
+#define GOT_ESCAPE_SEQUENCE_BS_U2 342
+#define GOT_ESCAPE_SEQUENCE_BS_U3 343
+#define GOT_ESCAPE_SEQUENCE_BS_U4 344
+#define GOT_ESCAPE_SEQUENCE_BS_U5 345
+#define GOT_ESCAPE_SEQUENCE_BS_U6 346
+#define GOT_ESCAPE_SEQUENCE_BS_U7 347
 
 #define GOT_IDENT 999
 
@@ -441,9 +457,12 @@ const std::uint32_t rows_per_formfeed = 1;
 
 Lexeme Lexer::scan_token() {
   std::string lex;
+  std::stack<int> states;
   int st = START;
   char c;
   bool _hold = true;
+
+  states.push(st);
 
   eat_whitespace();
 
@@ -466,7 +485,7 @@ Lexeme Lexer::scan_token() {
     case START:
       switch (c) {
       case EOF:
-        hold(THE_END);
+        holdst(THE_END);
         break;
       case '~':
         r(Token::BIT_NOT, 1);
@@ -492,42 +511,42 @@ Lexeme Lexer::scan_token() {
         r(Token::SEMI, 1);
       case '%':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::MOD_ASSIGN, 2);
         } else {
           r(Token::MOD, 1);
         }
       case '/':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::DIV_ASSIGN, 2);
         } else {
           r(Token::DIV, 1);
         }
       case '*':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::MUL_ASSIGN, 2);
         } else {
           r(Token::STAR, 1);
         }
       case '=':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::EQUALS, 2);
         } else {
           r(Token::ASSIGN, 1);
         }
       case '!':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::NOTEQUALS, 2);
         } else {
           r(Token::LOG_NOT, 1);
         }
       case '^':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::XOR_ASSIGN, 2);
         } else {
           r(Token::BIT_XOR, 1);
@@ -535,15 +554,15 @@ Lexeme Lexer::scan_token() {
       case '.': {
         const int peek = sr_->peek();
         if (peek == '.') {
-          munch();
+          advance();
           if (sr_->peek() == '.') {
-            munch();
+            advance();
             r(Token::ELLIPSIS, 3);
           }
           backup('.');
           r(Token::DOT, 1);
         } else if (std::isdigit(peek)) {
-          st = GOT_FLOAT_CONST_DOT_DIGIT;
+          nextst(GOT_FLOAT_CONST_DOT_DIGIT);
         } else {
           r(Token::DOT, 1);
         }
@@ -551,10 +570,10 @@ Lexeme Lexer::scan_token() {
       case '|': {
         const char peek = sr_->peek();
         if (peek == '|') {
-          munch();
+          advance();
           r(Token::LOG_OR, 2);
         } else if (peek == '=') {
-          munch();
+          advance();
           r(Token::OR_ASSIGN, 2);
         } else {
           r(Token::BIT_OR, 1);
@@ -563,10 +582,10 @@ Lexeme Lexer::scan_token() {
       case '&': {
         const char peek = sr_->peek();
         if (peek == '&') {
-          munch();
+          advance();
           r(Token::LOG_AND, 2);
         } else if (peek == '=') {
-          munch();
+          advance();
           r(Token::AND_ASSIGN, 2);
         } else {
           r(Token::AMP, 1);
@@ -575,10 +594,10 @@ Lexeme Lexer::scan_token() {
       case '+': {
         const char peek = sr_->peek();
         if (peek == '+') {
-          munch();
+          advance();
           r(Token::INCR, 2);
         } else if (peek == '=') {
-          munch();
+          advance();
           r(Token::ADD_ASSIGN, 2);
         } else {
           r(Token::PLUS, 1);
@@ -587,38 +606,38 @@ Lexeme Lexer::scan_token() {
       case '-': {
         const char peek = sr_->peek();
         if (peek == '-') {
-          munch();
+          advance();
           r(Token::DECR, 2);
         } else if (peek == '=') {
-          munch();
+          advance();
           r(Token::SUB_ASSIGN, 2);
         } else if (peek == '>') {
-          munch();
+          advance();
           r(Token::ARROW, 2);
         } else {
           r(Token::MINUS, 1);
         }
       }
       case '>':
-        st = GOT_GT;
+        nextst(GOT_GT);
         break;
       case '<':
-        st = GOT_LT;
+        nextst(GOT_LT);
         break;
       case '\'':
-        st = GOT_CHAR_CONST_START;
+        nextst(GOT_CHAR_CONST_START);
         break;
       case '\"':
-        st = GOT_STRING_LIT_START;
+        nextst(GOT_STRING_LIT_START);
         break;
       case '0': {
         const char peek = sr_->peek();
         if (peek == 'x' || peek == 'X') {
-          munch_to_state(GOT_0x);
+          advancest(GOT_0x);
         } else if (peek == 'b' || peek == 'B') {
-          munch_to_state(GOT_BIN_CONST_START);
+          advancest(GOT_BIN_CONST_START);
         } else {
-          st = GOT_OCT_LITERAL;
+          nextst(GOT_OCT_LITERAL);
         }
       } break;
       case '1':
@@ -630,70 +649,70 @@ Lexeme Lexer::scan_token() {
       case '7':
       case '8':
       case '9':
-        hold(GOT_INT_LITERAL);
+        holdst(GOT_INT_LITERAL);
         break;
       case 'a': // alignas alignof auto
-        st = GOT_a;
+        nextst(GOT_a);
         break;
       case 'b': // bool break
-        st = GOT_b;
+        nextst(GOT_b);
         break;
       case 'c': // case char const constexpr continue
-        st = GOT_c;
+        nextst(GOT_c);
         break;
       case 'd': // default do double
-        st = GOT_d;
+        nextst(GOT_d);
         break;
       case 'e': // else enum extern
-        st = GOT_e;
+        nextst(GOT_e);
         break;
       case 'f': // false float for
-        st = GOT_f;
+        nextst(GOT_f);
         break;
       case 'g': // goto
-        st = GOT_g;
+        nextst(GOT_g);
         break;
       case 'i': // if inline int
-        st = GOT_i;
+        nextst(GOT_i);
         break;
       case 'l': // long
-        st = GOT_l;
+        nextst(GOT_l);
         break;
       case 'L':
-        st = GOT_L;
+        nextst(GOT_L);
         break;
       case 'n': // nullptr
-        st = GOT_n;
+        nextst(GOT_n);
         break;
       case 'r': // register restrict return
-        st = GOT_r;
+        nextst(GOT_r);
         break;
       case 's': // short signed sizeof static static_assert struct switch
-        st = GOT_s;
+        nextst(GOT_s);
         break;
       case 't': // thread_local true typedef typeof typeof_unqual
-        st = GOT_t;
+        nextst(GOT_t);
         break;
       case 'u': // union unsigned
-        st = GOT_u;
+        nextst(GOT_u);
         break;
       case 'U':
-        st = GOT_U;
+        nextst(GOT_U);
         break;
       case 'v': // void volatile
-        st = GOT_v;
+        nextst(GOT_v);
         break;
       case 'w': // while
-        st = GOT_w;
+        nextst(GOT_w);
         break;
       case '_': // _Alignas _Alignof _Atomic _BitInt _Bool _Complex
                 // _Decimal128 _Decimal32 _Decimal64 _Generic _Imaginary
                 // _Noreturn _Static_assert _Thread_local
-        st = GOT__;
+        nextst(GOT__);
         break;
       default:
         if (is_ident_start(c)) {
-          hold(GOT_IDENT);
+          holdst(GOT_IDENT);
         } else {
           print_error(std::cerr, "Skipped invalid character ",
                       static_cast<int>(c), ' ', std::isprint(c) ? c : ' ',
@@ -701,7 +720,7 @@ Lexeme Lexer::scan_token() {
           ++col_;
 
           eat_whitespace();
-          hold(START);
+          holdst(START);
         }
       } // switch (c) for START
       break;
@@ -712,7 +731,7 @@ Lexeme Lexer::scan_token() {
         r(Token::GREATER_OR_EQUAL, 2);
       case '>':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::RSHIFT_ASSIGN, 3);
         } else {
           r(Token::RSHIFT, 2);
@@ -729,7 +748,7 @@ Lexeme Lexer::scan_token() {
         r(Token::LESS_OR_EQUAL, 2);
       case '<':
         if (sr_->peek() == '=') {
-          munch();
+          advance();
           r(Token::LSHIFT_ASSIGN, 3);
         } else {
           r(Token::LSHIFT, 2);
@@ -752,34 +771,34 @@ Lexeme Lexer::scan_token() {
     case GOT__:
       switch (c) {
       case 'A':
-        st = GOT__A;
+        nextst(GOT__A);
         break;
       case 'B':
-        st = GOT__B;
+        nextst(GOT__B);
         break;
       case 'C':
-        st = GOT__C;
+        nextst(GOT__C);
         break;
       case 'D':
-        st = GOT__D;
+        nextst(GOT__D);
         break;
       case 'G':
-        st = GOT__G;
+        nextst(GOT__G);
         break;
       case 'I':
-        st = GOT__I;
+        nextst(GOT__I);
         break;
       case 'N':
-        st = GOT__N;
+        nextst(GOT__N);
         break;
       case 'S':
-        st = GOT__S;
+        nextst(GOT__S);
         break;
       case 'T':
-        st = GOT__T;
+        nextst(GOT__T);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__
       break;
@@ -787,13 +806,13 @@ Lexeme Lexer::scan_token() {
     case GOT__A:
       switch (c) {
       case 'l':
-        st = GOT__Al;
+        nextst(GOT__Al);
         break;
       case 't':
-        st = GOT__At;
+        nextst(GOT__At);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__A
       break;
@@ -801,10 +820,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Al:
       switch (c) {
       case 'i':
-        st = GOT__Ali;
+        nextst(GOT__Ali);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Al
       break;
@@ -812,10 +831,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Ali:
       switch (c) {
       case 'g':
-        st = GOT__Alig;
+        nextst(GOT__Alig);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Ali
       break;
@@ -823,10 +842,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Alig:
       switch (c) {
       case 'n':
-        st = GOT__Align;
+        nextst(GOT__Align);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Alig
       break;
@@ -834,13 +853,13 @@ Lexeme Lexer::scan_token() {
     case GOT__Align:
       switch (c) {
       case 'a':
-        st = GOT__Aligna;
+        nextst(GOT__Aligna);
         break;
       case 'o':
-        st = GOT__Aligno;
+        nextst(GOT__Aligno);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Align
       break;
@@ -849,13 +868,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 's':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_ALIGNAS, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Aligna
       break;
@@ -864,13 +883,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_ALIGNOF, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Aligno
       break;
@@ -878,10 +897,10 @@ Lexeme Lexer::scan_token() {
     case GOT__At:
       switch (c) {
       case 'o':
-        st = GOT__Ato;
+        nextst(GOT__Ato);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__At
       break;
@@ -889,10 +908,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Ato:
       switch (c) {
       case 'm':
-        st = GOT__Atom;
+        nextst(GOT__Atom);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Ato
       break;
@@ -900,10 +919,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Atom:
       switch (c) {
       case 'i':
-        st = GOT__Atomi;
+        nextst(GOT__Atomi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Atom
       break;
@@ -912,13 +931,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'c':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_ATOMIC, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Atomi
       break;
@@ -926,13 +945,13 @@ Lexeme Lexer::scan_token() {
     case GOT__B:
       switch (c) {
       case 'i':
-        st = GOT__Bi;
+        nextst(GOT__Bi);
         break;
       case 'o':
-        st = GOT__Bo;
+        nextst(GOT__Bo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__B
       break;
@@ -940,10 +959,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Bi:
       switch (c) {
       case 't':
-        st = GOT__Bit;
+        nextst(GOT__Bit);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Bi
       break;
@@ -951,10 +970,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Bit:
       switch (c) {
       case 'I':
-        st = GOT__BitI;
+        nextst(GOT__BitI);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Bit
       break;
@@ -962,10 +981,10 @@ Lexeme Lexer::scan_token() {
     case GOT__BitI:
       switch (c) {
       case 'n':
-        st = GOT__BitIn;
+        nextst(GOT__BitIn);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__BitI
       break;
@@ -974,13 +993,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_BITINT, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__BitIn
       break;
@@ -988,10 +1007,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Bo:
       switch (c) {
       case 'o':
-        st = GOT__Boo;
+        nextst(GOT__Boo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Bo
       break;
@@ -1000,13 +1019,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_BOOL, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Boo
       break;
@@ -1014,10 +1033,10 @@ Lexeme Lexer::scan_token() {
     case GOT__C:
       switch (c) {
       case 'o':
-        st = GOT__Co;
+        nextst(GOT__Co);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__C
       break;
@@ -1025,10 +1044,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Co:
       switch (c) {
       case 'm':
-        st = GOT__Com;
+        nextst(GOT__Com);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Co
       break;
@@ -1036,10 +1055,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Com:
       switch (c) {
       case 'p':
-        st = GOT__Comp;
+        nextst(GOT__Comp);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Com
       break;
@@ -1047,10 +1066,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Comp:
       switch (c) {
       case 'l':
-        st = GOT__Compl;
+        nextst(GOT__Compl);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Comp
       break;
@@ -1058,10 +1077,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Compl:
       switch (c) {
       case 'e':
-        st = GOT__Comple;
+        nextst(GOT__Comple);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Compl
       break;
@@ -1070,13 +1089,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'x':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_COMPLEX, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Comple
       break;
@@ -1084,10 +1103,10 @@ Lexeme Lexer::scan_token() {
     case GOT__D:
       switch (c) {
       case 'e':
-        st = GOT__De;
+        nextst(GOT__De);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__D
       break;
@@ -1095,10 +1114,10 @@ Lexeme Lexer::scan_token() {
     case GOT__De:
       switch (c) {
       case 'c':
-        st = GOT__Dec;
+        nextst(GOT__Dec);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__De
       break;
@@ -1106,10 +1125,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Dec:
       switch (c) {
       case 'i':
-        st = GOT__Deci;
+        nextst(GOT__Deci);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Dec
       break;
@@ -1117,10 +1136,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Deci:
       switch (c) {
       case 'm':
-        st = GOT__Decim;
+        nextst(GOT__Decim);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Deci
       break;
@@ -1128,10 +1147,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Decim:
       switch (c) {
       case 'a':
-        st = GOT__Decima;
+        nextst(GOT__Decima);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decim
       break;
@@ -1139,10 +1158,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Decima:
       switch (c) {
       case 'l':
-        st = GOT__Decimal;
+        nextst(GOT__Decimal);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decima
       break;
@@ -1150,16 +1169,16 @@ Lexeme Lexer::scan_token() {
     case GOT__Decimal:
       switch (c) {
       case '1':
-        st = GOT__Decimal1;
+        nextst(GOT__Decimal1);
         break;
       case '3':
-        st = GOT__Decimal3;
+        nextst(GOT__Decimal3);
         break;
       case '6':
-        st = GOT__Decimal6;
+        nextst(GOT__Decimal6);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decimal
       break;
@@ -1167,10 +1186,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Decimal1:
       switch (c) {
       case '2':
-        st = GOT__Decimal12;
+        nextst(GOT__Decimal12);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decimal1
       break;
@@ -1179,13 +1198,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '8':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_DECIMAL128, 11);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decimal12
       break;
@@ -1194,13 +1213,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '2':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_DECIMAL32, 10);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decimal3
       break;
@@ -1209,13 +1228,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '4':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_DECIMAL64, 10);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Decimal6
       break;
@@ -1223,10 +1242,10 @@ Lexeme Lexer::scan_token() {
     case GOT__G:
       switch (c) {
       case 'e':
-        st = GOT__Ge;
+        nextst(GOT__Ge);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__G
       break;
@@ -1234,10 +1253,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Ge:
       switch (c) {
       case 'n':
-        st = GOT__Gen;
+        nextst(GOT__Gen);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Ge
       break;
@@ -1245,10 +1264,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Gen:
       switch (c) {
       case 'e':
-        st = GOT__Gene;
+        nextst(GOT__Gene);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Gen
       break;
@@ -1256,10 +1275,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Gene:
       switch (c) {
       case 'r':
-        st = GOT__Gener;
+        nextst(GOT__Gener);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Gene
       break;
@@ -1267,10 +1286,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Gener:
       switch (c) {
       case 'i':
-        st = GOT__Generi;
+        nextst(GOT__Generi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Gener
       break;
@@ -1279,13 +1298,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'c':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_GENERIC, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Generi
       break;
@@ -1293,10 +1312,10 @@ Lexeme Lexer::scan_token() {
     case GOT__I:
       switch (c) {
       case 'm':
-        st = GOT__Im;
+        nextst(GOT__Im);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__I
       break;
@@ -1304,10 +1323,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Im:
       switch (c) {
       case 'a':
-        st = GOT__Ima;
+        nextst(GOT__Ima);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Im
       break;
@@ -1315,10 +1334,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Ima:
       switch (c) {
       case 'g':
-        st = GOT__Imag;
+        nextst(GOT__Imag);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Ima
       break;
@@ -1326,10 +1345,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Imag:
       switch (c) {
       case 'i':
-        st = GOT__Imagi;
+        nextst(GOT__Imagi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Imag
       break;
@@ -1337,10 +1356,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Imagi:
       switch (c) {
       case 'n':
-        st = GOT__Imagin;
+        nextst(GOT__Imagin);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Imagi
       break;
@@ -1348,10 +1367,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Imagin:
       switch (c) {
       case 'a':
-        st = GOT__Imagina;
+        nextst(GOT__Imagina);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Imagin
       break;
@@ -1359,10 +1378,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Imagina:
       switch (c) {
       case 'r':
-        st = GOT__Imaginar;
+        nextst(GOT__Imaginar);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Imagina
       break;
@@ -1371,13 +1390,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'y':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_IMAGINARY, 10);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Imaginar
       break;
@@ -1385,10 +1404,10 @@ Lexeme Lexer::scan_token() {
     case GOT__N:
       switch (c) {
       case 'o':
-        st = GOT__No;
+        nextst(GOT__No);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__N
       break;
@@ -1396,10 +1415,10 @@ Lexeme Lexer::scan_token() {
     case GOT__No:
       switch (c) {
       case 'r':
-        st = GOT__Nor;
+        nextst(GOT__Nor);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__No
       break;
@@ -1407,10 +1426,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Nor:
       switch (c) {
       case 'e':
-        st = GOT__Nore;
+        nextst(GOT__Nore);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Nor
       break;
@@ -1418,10 +1437,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Nore:
       switch (c) {
       case 't':
-        st = GOT__Noret;
+        nextst(GOT__Noret);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Nore
       break;
@@ -1429,10 +1448,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Noret:
       switch (c) {
       case 'u':
-        st = GOT__Noretu;
+        nextst(GOT__Noretu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Noret
       break;
@@ -1440,10 +1459,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Noretu:
       switch (c) {
       case 'r':
-        st = GOT__Noretur;
+        nextst(GOT__Noretur);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Noretu
       break;
@@ -1452,13 +1471,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'n':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_NORETURN, 9);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Noretur
       break;
@@ -1466,10 +1485,10 @@ Lexeme Lexer::scan_token() {
     case GOT__S:
       switch (c) {
       case 't':
-        st = GOT__St;
+        nextst(GOT__St);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__S
       break;
@@ -1477,10 +1496,10 @@ Lexeme Lexer::scan_token() {
     case GOT__St:
       switch (c) {
       case 'a':
-        st = GOT__Sta;
+        nextst(GOT__Sta);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__St
       break;
@@ -1488,10 +1507,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Sta:
       switch (c) {
       case 't':
-        st = GOT__Stat;
+        nextst(GOT__Stat);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Sta
       break;
@@ -1499,10 +1518,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Stat:
       switch (c) {
       case 'i':
-        st = GOT__Stati;
+        nextst(GOT__Stati);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Stat
       break;
@@ -1510,10 +1529,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Stati:
       switch (c) {
       case 'c':
-        st = GOT__Static;
+        nextst(GOT__Static);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Stati
       break;
@@ -1521,10 +1540,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static:
       switch (c) {
       case '_':
-        st = GOT__Static_;
+        nextst(GOT__Static_);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static
       break;
@@ -1532,10 +1551,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static_:
       switch (c) {
       case 'a':
-        st = GOT__Static_a;
+        nextst(GOT__Static_a);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_
       break;
@@ -1543,10 +1562,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static_a:
       switch (c) {
       case 's':
-        st = GOT__Static_as;
+        nextst(GOT__Static_as);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_a
       break;
@@ -1554,10 +1573,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static_as:
       switch (c) {
       case 's':
-        st = GOT__Static_ass;
+        nextst(GOT__Static_ass);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_as
       break;
@@ -1565,10 +1584,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static_ass:
       switch (c) {
       case 'e':
-        st = GOT__Static_asse;
+        nextst(GOT__Static_asse);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_ass
       break;
@@ -1576,10 +1595,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Static_asse:
       switch (c) {
       case 'r':
-        st = GOT__Static_asser;
+        nextst(GOT__Static_asser);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_asse
       break;
@@ -1588,13 +1607,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_STATIC_ASSERT, 14);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Static_asser
       break;
@@ -1602,10 +1621,10 @@ Lexeme Lexer::scan_token() {
     case GOT__T:
       switch (c) {
       case 'h':
-        st = GOT__Th;
+        nextst(GOT__Th);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__T
       break;
@@ -1613,10 +1632,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Th:
       switch (c) {
       case 'r':
-        st = GOT__Thr;
+        nextst(GOT__Thr);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Th
       break;
@@ -1624,10 +1643,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thr:
       switch (c) {
       case 'e':
-        st = GOT__Thre;
+        nextst(GOT__Thre);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thr
       break;
@@ -1635,10 +1654,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thre:
       switch (c) {
       case 'a':
-        st = GOT__Threa;
+        nextst(GOT__Threa);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thre
       break;
@@ -1646,10 +1665,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Threa:
       switch (c) {
       case 'd':
-        st = GOT__Thread;
+        nextst(GOT__Thread);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Threa
       break;
@@ -1657,10 +1676,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thread:
       switch (c) {
       case '_':
-        st = GOT__Thread_;
+        nextst(GOT__Thread_);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread
       break;
@@ -1668,10 +1687,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thread_:
       switch (c) {
       case 'l':
-        st = GOT__Thread_l;
+        nextst(GOT__Thread_l);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread_
       break;
@@ -1679,10 +1698,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thread_l:
       switch (c) {
       case 'o':
-        st = GOT__Thread_lo;
+        nextst(GOT__Thread_lo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread_l
       break;
@@ -1690,10 +1709,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thread_lo:
       switch (c) {
       case 'c':
-        st = GOT__Thread_loc;
+        nextst(GOT__Thread_loc);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread_lo
       break;
@@ -1701,10 +1720,10 @@ Lexeme Lexer::scan_token() {
     case GOT__Thread_loc:
       switch (c) {
       case 'a':
-        st = GOT__Thread_loca;
+        nextst(GOT__Thread_loca);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread_loc
       break;
@@ -1713,13 +1732,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::_THREAD_LOCAL, 13);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT__Thread_loca
       break;
@@ -1727,13 +1746,13 @@ Lexeme Lexer::scan_token() {
     case GOT_a:
       switch (c) {
       case 'l':
-        st = GOT_al;
+        nextst(GOT_al);
         break;
       case 'u':
-        st = GOT_au;
+        nextst(GOT_au);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_a
       break;
@@ -1741,10 +1760,10 @@ Lexeme Lexer::scan_token() {
     case GOT_al:
       switch (c) {
       case 'i':
-        st = GOT_ali;
+        nextst(GOT_ali);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_al
       break;
@@ -1752,10 +1771,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ali:
       switch (c) {
       case 'g':
-        st = GOT_alig;
+        nextst(GOT_alig);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ali
       break;
@@ -1763,10 +1782,10 @@ Lexeme Lexer::scan_token() {
     case GOT_alig:
       switch (c) {
       case 'n':
-        st = GOT_align;
+        nextst(GOT_align);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_alig
       break;
@@ -1774,13 +1793,13 @@ Lexeme Lexer::scan_token() {
     case GOT_align:
       switch (c) {
       case 'a':
-        st = GOT_aligna;
+        nextst(GOT_aligna);
         break;
       case 'o':
-        st = GOT_aligno;
+        nextst(GOT_aligno);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_align
       break;
@@ -1789,13 +1808,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 's':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::ALIGNAS, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_aligna
       break;
@@ -1804,13 +1823,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::ALIGNOF, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_aligno
       break;
@@ -1818,10 +1837,10 @@ Lexeme Lexer::scan_token() {
     case GOT_au:
       switch (c) {
       case 't':
-        st = GOT_aut;
+        nextst(GOT_aut);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_au
       break;
@@ -1830,13 +1849,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'o':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::AUTO, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_aut
       break;
@@ -1844,13 +1863,13 @@ Lexeme Lexer::scan_token() {
     case GOT_b:
       switch (c) {
       case 'o':
-        st = GOT_bo;
+        nextst(GOT_bo);
         break;
       case 'r':
-        st = GOT_br;
+        nextst(GOT_br);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_b
       break;
@@ -1858,10 +1877,10 @@ Lexeme Lexer::scan_token() {
     case GOT_bo:
       switch (c) {
       case 'o':
-        st = GOT_boo;
+        nextst(GOT_boo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_bo
       break;
@@ -1870,13 +1889,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::BOOL, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_boo
       break;
@@ -1884,10 +1903,10 @@ Lexeme Lexer::scan_token() {
     case GOT_br:
       switch (c) {
       case 'e':
-        st = GOT_bre;
+        nextst(GOT_bre);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_br
       break;
@@ -1895,10 +1914,10 @@ Lexeme Lexer::scan_token() {
     case GOT_bre:
       switch (c) {
       case 'a':
-        st = GOT_brea;
+        nextst(GOT_brea);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_bre
       break;
@@ -1907,13 +1926,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'k':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::BREAK, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_brea
       break;
@@ -1921,16 +1940,16 @@ Lexeme Lexer::scan_token() {
     case GOT_c:
       switch (c) {
       case 'a':
-        st = GOT_ca;
+        nextst(GOT_ca);
         break;
       case 'h':
-        st = GOT_ch;
+        nextst(GOT_ch);
         break;
       case 'o':
-        st = GOT_co;
+        nextst(GOT_co);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_c
       break;
@@ -1938,10 +1957,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ca:
       switch (c) {
       case 's':
-        st = GOT_cas;
+        nextst(GOT_cas);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ca
       break;
@@ -1950,13 +1969,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::CASE, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_cas
       break;
@@ -1964,10 +1983,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ch:
       switch (c) {
       case 'a':
-        st = GOT_cha;
+        nextst(GOT_cha);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ch
       break;
@@ -1976,13 +1995,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'r':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::CHAR, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_cha
       break;
@@ -1990,10 +2009,10 @@ Lexeme Lexer::scan_token() {
     case GOT_co:
       switch (c) {
       case 'n':
-        st = GOT_con;
+        nextst(GOT_con);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_co
       break;
@@ -2001,13 +2020,13 @@ Lexeme Lexer::scan_token() {
     case GOT_con:
       switch (c) {
       case 's':
-        st = GOT_cons;
+        nextst(GOT_cons);
         break;
       case 't':
-        st = GOT_cont;
+        nextst(GOT_cont);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_con
       break;
@@ -2016,15 +2035,15 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (sr_->peek() == 'e') {
-          munch_to_state(GOT_conste);
+          advancest(GOT_conste);
         } else if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::CONST, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_cons
       break;
@@ -2032,10 +2051,10 @@ Lexeme Lexer::scan_token() {
     case GOT_conste:
       switch (c) {
       case 'x':
-        st = GOT_constex;
+        nextst(GOT_constex);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_conste
       break;
@@ -2043,10 +2062,10 @@ Lexeme Lexer::scan_token() {
     case GOT_constex:
       switch (c) {
       case 'p':
-        st = GOT_constexp;
+        nextst(GOT_constexp);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_constex
       break;
@@ -2055,13 +2074,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'r':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::CONSTEXPR, 9);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_constexp
       break;
@@ -2069,10 +2088,10 @@ Lexeme Lexer::scan_token() {
     case GOT_cont:
       switch (c) {
       case 'i':
-        st = GOT_conti;
+        nextst(GOT_conti);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_cont
       break;
@@ -2080,10 +2099,10 @@ Lexeme Lexer::scan_token() {
     case GOT_conti:
       switch (c) {
       case 'n':
-        st = GOT_contin;
+        nextst(GOT_contin);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_conti
       break;
@@ -2091,10 +2110,10 @@ Lexeme Lexer::scan_token() {
     case GOT_contin:
       switch (c) {
       case 'u':
-        st = GOT_continu;
+        nextst(GOT_continu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_contin
       break;
@@ -2103,13 +2122,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::CONTINUE, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_continu
       break;
@@ -2117,19 +2136,19 @@ Lexeme Lexer::scan_token() {
     case GOT_d:
       switch (c) {
       case 'e':
-        st = GOT_de;
+        nextst(GOT_de);
         break;
       case 'o':
         if (sr_->peek() == 'u') {
-          munch_to_state(GOT_dou);
+          advancest(GOT_dou);
         } else if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::DO, 2);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_d
       break;
@@ -2137,10 +2156,10 @@ Lexeme Lexer::scan_token() {
     case GOT_de:
       switch (c) {
       case 'f':
-        st = GOT_def;
+        nextst(GOT_def);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_de
       break;
@@ -2148,10 +2167,10 @@ Lexeme Lexer::scan_token() {
     case GOT_def:
       switch (c) {
       case 'a':
-        st = GOT_defa;
+        nextst(GOT_defa);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_def
       break;
@@ -2159,10 +2178,10 @@ Lexeme Lexer::scan_token() {
     case GOT_defa:
       switch (c) {
       case 'u':
-        st = GOT_defau;
+        nextst(GOT_defau);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_defa
       break;
@@ -2170,10 +2189,10 @@ Lexeme Lexer::scan_token() {
     case GOT_defau:
       switch (c) {
       case 'l':
-        st = GOT_defaul;
+        nextst(GOT_defaul);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_defau
       break;
@@ -2182,13 +2201,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::DEFAULT, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_defaul
       break;
@@ -2196,10 +2215,10 @@ Lexeme Lexer::scan_token() {
     case GOT_dou:
       switch (c) {
       case 'b':
-        st = GOT_doub;
+        nextst(GOT_doub);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_dou
       break;
@@ -2207,10 +2226,10 @@ Lexeme Lexer::scan_token() {
     case GOT_doub:
       switch (c) {
       case 'l':
-        st = GOT_doubl;
+        nextst(GOT_doubl);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_doub
       break;
@@ -2219,13 +2238,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::DOUBLE, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_doubl
       break;
@@ -2233,16 +2252,16 @@ Lexeme Lexer::scan_token() {
     case GOT_e:
       switch (c) {
       case 'l':
-        st = GOT_el;
+        nextst(GOT_el);
         break;
       case 'n':
-        st = GOT_en;
+        nextst(GOT_en);
         break;
       case 'x':
-        st = GOT_ex;
+        nextst(GOT_ex);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_e
       break;
@@ -2250,10 +2269,10 @@ Lexeme Lexer::scan_token() {
     case GOT_el:
       switch (c) {
       case 's':
-        st = GOT_els;
+        nextst(GOT_els);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_el
       break;
@@ -2262,13 +2281,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::ELSE, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_els
       break;
@@ -2276,10 +2295,10 @@ Lexeme Lexer::scan_token() {
     case GOT_en:
       switch (c) {
       case 'u':
-        st = GOT_enu;
+        nextst(GOT_enu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_en
       break;
@@ -2288,13 +2307,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'm':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::ENUM, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_enu
       break;
@@ -2302,10 +2321,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ex:
       switch (c) {
       case 't':
-        st = GOT_ext;
+        nextst(GOT_ext);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ex
       break;
@@ -2313,10 +2332,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ext:
       switch (c) {
       case 'e':
-        st = GOT_exte;
+        nextst(GOT_exte);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ext
       break;
@@ -2324,10 +2343,10 @@ Lexeme Lexer::scan_token() {
     case GOT_exte:
       switch (c) {
       case 'r':
-        st = GOT_exter;
+        nextst(GOT_exter);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_exte
       break;
@@ -2336,13 +2355,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'n':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::EXTERN, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_exter
       break;
@@ -2350,16 +2369,16 @@ Lexeme Lexer::scan_token() {
     case GOT_f:
       switch (c) {
       case 'a':
-        st = GOT_fa;
+        nextst(GOT_fa);
         break;
       case 'l':
-        st = GOT_fl;
+        nextst(GOT_fl);
         break;
       case 'o':
-        st = GOT_fo;
+        nextst(GOT_fo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_f
       break;
@@ -2367,10 +2386,10 @@ Lexeme Lexer::scan_token() {
     case GOT_fa:
       switch (c) {
       case 'l':
-        st = GOT_fal;
+        nextst(GOT_fal);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_fa
       break;
@@ -2378,10 +2397,10 @@ Lexeme Lexer::scan_token() {
     case GOT_fal:
       switch (c) {
       case 's':
-        st = GOT_fals;
+        nextst(GOT_fals);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_fal
       break;
@@ -2390,13 +2409,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::FALSE, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_fals
       break;
@@ -2404,10 +2423,10 @@ Lexeme Lexer::scan_token() {
     case GOT_fl:
       switch (c) {
       case 'o':
-        st = GOT_flo;
+        nextst(GOT_flo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_fl
       break;
@@ -2415,10 +2434,10 @@ Lexeme Lexer::scan_token() {
     case GOT_flo:
       switch (c) {
       case 'a':
-        st = GOT_floa;
+        nextst(GOT_floa);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_flo
       break;
@@ -2427,13 +2446,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::FLOAT, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_floa
       break;
@@ -2442,13 +2461,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'r':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::FOR, 3);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_fo
       break;
@@ -2456,10 +2475,10 @@ Lexeme Lexer::scan_token() {
     case GOT_g:
       switch (c) {
       case 'o':
-        st = GOT_go;
+        nextst(GOT_go);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_g
       break;
@@ -2467,10 +2486,10 @@ Lexeme Lexer::scan_token() {
     case GOT_go:
       switch (c) {
       case 't':
-        st = GOT_got;
+        nextst(GOT_got);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_go
       break;
@@ -2479,13 +2498,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'o':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::GOTO, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_got
       break;
@@ -2494,16 +2513,16 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::IF, 2);
         }
         break;
       case 'n':
-        st = GOT_in;
+        nextst(GOT_in);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_i
       break;
@@ -2511,17 +2530,17 @@ Lexeme Lexer::scan_token() {
     case GOT_in:
       switch (c) {
       case 'l':
-        st = GOT_inl;
+        nextst(GOT_inl);
         break;
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::INT, 3);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_in
       break;
@@ -2529,10 +2548,10 @@ Lexeme Lexer::scan_token() {
     case GOT_inl:
       switch (c) {
       case 'i':
-        st = GOT_inli;
+        nextst(GOT_inli);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_inl
       break;
@@ -2540,10 +2559,10 @@ Lexeme Lexer::scan_token() {
     case GOT_inli:
       switch (c) {
       case 'n':
-        st = GOT_inlin;
+        nextst(GOT_inlin);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_inli
       break;
@@ -2552,13 +2571,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::INLINE, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_inlin
       break;
@@ -2566,10 +2585,10 @@ Lexeme Lexer::scan_token() {
     case GOT_l:
       switch (c) {
       case 'o':
-        st = GOT_lo;
+        nextst(GOT_lo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_l
       break;
@@ -2577,10 +2596,10 @@ Lexeme Lexer::scan_token() {
     case GOT_lo:
       switch (c) {
       case 'n':
-        st = GOT_lon;
+        nextst(GOT_lon);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_lo
       break;
@@ -2589,13 +2608,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'g':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::LONG, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_lon
       break;
@@ -2603,10 +2622,10 @@ Lexeme Lexer::scan_token() {
     case GOT_n:
       switch (c) {
       case 'u':
-        st = GOT_nu;
+        nextst(GOT_nu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_n
       break;
@@ -2614,10 +2633,10 @@ Lexeme Lexer::scan_token() {
     case GOT_nu:
       switch (c) {
       case 'l':
-        st = GOT_nul;
+        nextst(GOT_nul);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_nu
       break;
@@ -2625,10 +2644,10 @@ Lexeme Lexer::scan_token() {
     case GOT_nul:
       switch (c) {
       case 'l':
-        st = GOT_null;
+        nextst(GOT_null);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_nul
       break;
@@ -2636,10 +2655,10 @@ Lexeme Lexer::scan_token() {
     case GOT_null:
       switch (c) {
       case 'p':
-        st = GOT_nullp;
+        nextst(GOT_nullp);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_null
       break;
@@ -2647,10 +2666,10 @@ Lexeme Lexer::scan_token() {
     case GOT_nullp:
       switch (c) {
       case 't':
-        st = GOT_nullpt;
+        nextst(GOT_nullpt);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_nullp
       break;
@@ -2659,13 +2678,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'r':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::NULLPTR, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_nullpt
       break;
@@ -2673,10 +2692,10 @@ Lexeme Lexer::scan_token() {
     case GOT_r:
       switch (c) {
       case 'e':
-        st = GOT_re;
+        nextst(GOT_re);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_r
       break;
@@ -2684,16 +2703,16 @@ Lexeme Lexer::scan_token() {
     case GOT_re:
       switch (c) {
       case 'g':
-        st = GOT_reg;
+        nextst(GOT_reg);
         break;
       case 's':
-        st = GOT_res;
+        nextst(GOT_res);
         break;
       case 't':
-        st = GOT_ret;
+        nextst(GOT_ret);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_re
       break;
@@ -2701,10 +2720,10 @@ Lexeme Lexer::scan_token() {
     case GOT_reg:
       switch (c) {
       case 'i':
-        st = GOT_regi;
+        nextst(GOT_regi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_reg
       break;
@@ -2712,10 +2731,10 @@ Lexeme Lexer::scan_token() {
     case GOT_regi:
       switch (c) {
       case 's':
-        st = GOT_regis;
+        nextst(GOT_regis);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_regi
       break;
@@ -2723,10 +2742,10 @@ Lexeme Lexer::scan_token() {
     case GOT_regis:
       switch (c) {
       case 't':
-        st = GOT_regist;
+        nextst(GOT_regist);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_regis
       break;
@@ -2734,10 +2753,10 @@ Lexeme Lexer::scan_token() {
     case GOT_regist:
       switch (c) {
       case 'e':
-        st = GOT_registe;
+        nextst(GOT_registe);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_regist
       break;
@@ -2746,13 +2765,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'r':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::REGISTER, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_registe
       break;
@@ -2760,10 +2779,10 @@ Lexeme Lexer::scan_token() {
     case GOT_res:
       switch (c) {
       case 't':
-        st = GOT_rest;
+        nextst(GOT_rest);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_res
       break;
@@ -2771,10 +2790,10 @@ Lexeme Lexer::scan_token() {
     case GOT_rest:
       switch (c) {
       case 'r':
-        st = GOT_restr;
+        nextst(GOT_restr);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_rest
       break;
@@ -2782,10 +2801,10 @@ Lexeme Lexer::scan_token() {
     case GOT_restr:
       switch (c) {
       case 'i':
-        st = GOT_restri;
+        nextst(GOT_restri);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_restr
       break;
@@ -2793,10 +2812,10 @@ Lexeme Lexer::scan_token() {
     case GOT_restri:
       switch (c) {
       case 'c':
-        st = GOT_restric;
+        nextst(GOT_restric);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_restri
       break;
@@ -2805,13 +2824,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::RESTRICT, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_restric
       break;
@@ -2819,10 +2838,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ret:
       switch (c) {
       case 'u':
-        st = GOT_retu;
+        nextst(GOT_retu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ret
       break;
@@ -2830,10 +2849,10 @@ Lexeme Lexer::scan_token() {
     case GOT_retu:
       switch (c) {
       case 'r':
-        st = GOT_retur;
+        nextst(GOT_retur);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_retu
       break;
@@ -2842,13 +2861,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'n':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::RETURN, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_retur
       break;
@@ -2856,19 +2875,19 @@ Lexeme Lexer::scan_token() {
     case GOT_s:
       switch (c) {
       case 'h':
-        st = GOT_sh;
+        nextst(GOT_sh);
         break;
       case 'i':
-        st = GOT_si;
+        nextst(GOT_si);
         break;
       case 't':
-        st = GOT_st;
+        nextst(GOT_st);
         break;
       case 'w':
-        st = GOT_sw;
+        nextst(GOT_sw);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_s
       break;
@@ -2876,10 +2895,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sh:
       switch (c) {
       case 'o':
-        st = GOT_sho;
+        nextst(GOT_sho);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sh
       break;
@@ -2887,10 +2906,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sho:
       switch (c) {
       case 'r':
-        st = GOT_shor;
+        nextst(GOT_shor);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sho
       break;
@@ -2899,13 +2918,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::SHORT, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_shor
       break;
@@ -2913,13 +2932,13 @@ Lexeme Lexer::scan_token() {
     case GOT_si:
       switch (c) {
       case 'g':
-        st = GOT_sig;
+        nextst(GOT_sig);
         break;
       case 'z':
-        st = GOT_siz;
+        nextst(GOT_siz);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_si
       break;
@@ -2927,10 +2946,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sig:
       switch (c) {
       case 'n':
-        st = GOT_sign;
+        nextst(GOT_sign);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sig
       break;
@@ -2938,10 +2957,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sign:
       switch (c) {
       case 'e':
-        st = GOT_signe;
+        nextst(GOT_signe);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sign
       break;
@@ -2950,13 +2969,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'd':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::SIGNED, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_signe
       break;
@@ -2964,10 +2983,10 @@ Lexeme Lexer::scan_token() {
     case GOT_siz:
       switch (c) {
       case 'e':
-        st = GOT_size;
+        nextst(GOT_size);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_siz
       break;
@@ -2975,10 +2994,10 @@ Lexeme Lexer::scan_token() {
     case GOT_size:
       switch (c) {
       case 'o':
-        st = GOT_sizeo;
+        nextst(GOT_sizeo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_size
       break;
@@ -2987,13 +3006,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::SIZEOF, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sizeo
       break;
@@ -3001,13 +3020,13 @@ Lexeme Lexer::scan_token() {
     case GOT_st:
       switch (c) {
       case 'a':
-        st = GOT_sta;
+        nextst(GOT_sta);
         break;
       case 'r':
-        st = GOT_str;
+        nextst(GOT_str);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_st
       break;
@@ -3015,10 +3034,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sta:
       switch (c) {
       case 't':
-        st = GOT_stat;
+        nextst(GOT_stat);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sta
       break;
@@ -3026,10 +3045,10 @@ Lexeme Lexer::scan_token() {
     case GOT_stat:
       switch (c) {
       case 'i':
-        st = GOT_stati;
+        nextst(GOT_stati);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_stat
       break;
@@ -3038,15 +3057,15 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'c':
         if (sr_->peek() == '_') {
-          munch_to_state(GOT_static_);
+          advancest(GOT_static_);
         } else if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::STATIC, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_stati
       break;
@@ -3054,10 +3073,10 @@ Lexeme Lexer::scan_token() {
     case GOT_static_:
       switch (c) {
       case 'a':
-        st = GOT_static_a;
+        nextst(GOT_static_a);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_
       break;
@@ -3065,10 +3084,10 @@ Lexeme Lexer::scan_token() {
     case GOT_static_a:
       switch (c) {
       case 's':
-        st = GOT_static_as;
+        nextst(GOT_static_as);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_a
       break;
@@ -3076,10 +3095,10 @@ Lexeme Lexer::scan_token() {
     case GOT_static_as:
       switch (c) {
       case 's':
-        st = GOT_static_ass;
+        nextst(GOT_static_ass);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_as
       break;
@@ -3087,10 +3106,10 @@ Lexeme Lexer::scan_token() {
     case GOT_static_ass:
       switch (c) {
       case 'e':
-        st = GOT_static_asse;
+        nextst(GOT_static_asse);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_ass
       break;
@@ -3098,10 +3117,10 @@ Lexeme Lexer::scan_token() {
     case GOT_static_asse:
       switch (c) {
       case 'r':
-        st = GOT_static_asser;
+        nextst(GOT_static_asser);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_asse
       break;
@@ -3110,13 +3129,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::STATIC_ASSERT, 13);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_static_asser
       break;
@@ -3124,10 +3143,10 @@ Lexeme Lexer::scan_token() {
     case GOT_str:
       switch (c) {
       case 'u':
-        st = GOT_stru;
+        nextst(GOT_stru);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_str
       break;
@@ -3135,10 +3154,10 @@ Lexeme Lexer::scan_token() {
     case GOT_stru:
       switch (c) {
       case 'c':
-        st = GOT_struc;
+        nextst(GOT_struc);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_stru
       break;
@@ -3147,13 +3166,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 't':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::STRUCT, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_struc
       break;
@@ -3161,10 +3180,10 @@ Lexeme Lexer::scan_token() {
     case GOT_sw:
       switch (c) {
       case 'i':
-        st = GOT_swi;
+        nextst(GOT_swi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_sw
       break;
@@ -3172,10 +3191,10 @@ Lexeme Lexer::scan_token() {
     case GOT_swi:
       switch (c) {
       case 't':
-        st = GOT_swit;
+        nextst(GOT_swit);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_swi
       break;
@@ -3183,10 +3202,10 @@ Lexeme Lexer::scan_token() {
     case GOT_swit:
       switch (c) {
       case 'c':
-        st = GOT_switc;
+        nextst(GOT_switc);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_swit
       break;
@@ -3195,13 +3214,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'h':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::SWITCH, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_switc
       break;
@@ -3209,16 +3228,16 @@ Lexeme Lexer::scan_token() {
     case GOT_t:
       switch (c) {
       case 'h':
-        st = GOT_th;
+        nextst(GOT_th);
         break;
       case 'r':
-        st = GOT_tr;
+        nextst(GOT_tr);
         break;
       case 'y':
-        st = GOT_ty;
+        nextst(GOT_ty);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_t
       break;
@@ -3226,10 +3245,10 @@ Lexeme Lexer::scan_token() {
     case GOT_th:
       switch (c) {
       case 'r':
-        st = GOT_thr;
+        nextst(GOT_thr);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_th
       break;
@@ -3237,10 +3256,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thr:
       switch (c) {
       case 'e':
-        st = GOT_thre;
+        nextst(GOT_thre);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thr
       break;
@@ -3248,10 +3267,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thre:
       switch (c) {
       case 'a':
-        st = GOT_threa;
+        nextst(GOT_threa);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thre
       break;
@@ -3259,10 +3278,10 @@ Lexeme Lexer::scan_token() {
     case GOT_threa:
       switch (c) {
       case 'd':
-        st = GOT_thread;
+        nextst(GOT_thread);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_threa
       break;
@@ -3270,10 +3289,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thread:
       switch (c) {
       case '_':
-        st = GOT_thread_;
+        nextst(GOT_thread_);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread
       break;
@@ -3281,10 +3300,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thread_:
       switch (c) {
       case 'l':
-        st = GOT_thread_l;
+        nextst(GOT_thread_l);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread_
       break;
@@ -3292,10 +3311,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thread_l:
       switch (c) {
       case 'o':
-        st = GOT_thread_lo;
+        nextst(GOT_thread_lo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread_l
       break;
@@ -3303,10 +3322,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thread_lo:
       switch (c) {
       case 'c':
-        st = GOT_thread_loc;
+        nextst(GOT_thread_loc);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread_lo
       break;
@@ -3314,10 +3333,10 @@ Lexeme Lexer::scan_token() {
     case GOT_thread_loc:
       switch (c) {
       case 'a':
-        st = GOT_thread_loca;
+        nextst(GOT_thread_loca);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread_loc
       break;
@@ -3326,13 +3345,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::THREAD_LOCAL, 12);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_thread_loca
       break;
@@ -3340,10 +3359,10 @@ Lexeme Lexer::scan_token() {
     case GOT_tr:
       switch (c) {
       case 'u':
-        st = GOT_tru;
+        nextst(GOT_tru);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_tr
       break;
@@ -3352,13 +3371,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::TRUE, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_tru
       break;
@@ -3366,10 +3385,10 @@ Lexeme Lexer::scan_token() {
     case GOT_ty:
       switch (c) {
       case 'p':
-        st = GOT_typ;
+        nextst(GOT_typ);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_ty
       break;
@@ -3377,10 +3396,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typ:
       switch (c) {
       case 'e':
-        st = GOT_type;
+        nextst(GOT_type);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typ
       break;
@@ -3388,13 +3407,13 @@ Lexeme Lexer::scan_token() {
     case GOT_type:
       switch (c) {
       case 'd':
-        st = GOT_typed;
+        nextst(GOT_typed);
         break;
       case 'o':
-        st = GOT_typeo;
+        nextst(GOT_typeo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_type
       break;
@@ -3402,10 +3421,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typed:
       switch (c) {
       case 'e':
-        st = GOT_typede;
+        nextst(GOT_typede);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typed
       break;
@@ -3414,13 +3433,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::TYPEDEF, 7);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typede
       break;
@@ -3429,15 +3448,15 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'f':
         if (sr_->peek() == '_') {
-          munch_to_state(GOT_typeof_);
+          advancest(GOT_typeof_);
         } else if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::TYPEOF, 6);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeo
       break;
@@ -3445,10 +3464,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typeof_:
       switch (c) {
       case 'u':
-        st = GOT_typeof_u;
+        nextst(GOT_typeof_u);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_
       break;
@@ -3456,10 +3475,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typeof_u:
       switch (c) {
       case 'n':
-        st = GOT_typeof_un;
+        nextst(GOT_typeof_un);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_u
       break;
@@ -3467,10 +3486,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typeof_un:
       switch (c) {
       case 'q':
-        st = GOT_typeof_unq;
+        nextst(GOT_typeof_unq);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_un
       break;
@@ -3478,10 +3497,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typeof_unq:
       switch (c) {
       case 'u':
-        st = GOT_typeof_unqu;
+        nextst(GOT_typeof_unqu);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_unq
       break;
@@ -3489,10 +3508,10 @@ Lexeme Lexer::scan_token() {
     case GOT_typeof_unqu:
       switch (c) {
       case 'a':
-        st = GOT_typeof_unqua;
+        nextst(GOT_typeof_unqua);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_unqu
       break;
@@ -3501,13 +3520,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::TYPEOF_UNQUAL, 13);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_typeof_unqua
       break;
@@ -3516,25 +3535,25 @@ Lexeme Lexer::scan_token() {
       const int peek = sr_->peek();
       switch (c) {
       case 'n':
-        st = GOT_un;
+        nextst(GOT_un);
         break;
       case '8':
         if (peek == '\'') {
-          munch_to_state(GOT_CHAR_CONST_START);
+          advancest(GOT_CHAR_CONST_START);
         } else if (peek == '\"') {
-          munch_to_state(GOT_STRING_LIT_START);
+          advancest(GOT_STRING_LIT_START);
         } else {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         }
         break;
       case '\'':
-        st = GOT_CHAR_CONST_START;
+        nextst(GOT_CHAR_CONST_START);
         break;
       case '\"':
-        st = GOT_STRING_LIT_START;
+        nextst(GOT_STRING_LIT_START);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_u
     } break;
@@ -3542,13 +3561,13 @@ Lexeme Lexer::scan_token() {
     case GOT_U:
       switch (c) {
       case '\'':
-        st = GOT_CHAR_CONST_START;
+        nextst(GOT_CHAR_CONST_START);
         break;
       case '\"':
-        st = GOT_STRING_LIT_START;
+        nextst(GOT_STRING_LIT_START);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_U
       break;
@@ -3556,13 +3575,13 @@ Lexeme Lexer::scan_token() {
     case GOT_L:
       switch (c) {
       case '\'':
-        st = GOT_CHAR_CONST_START;
+        nextst(GOT_CHAR_CONST_START);
         break;
       case '\"':
-        st = GOT_STRING_LIT_START;
+        nextst(GOT_STRING_LIT_START);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_L
       break;
@@ -3570,13 +3589,13 @@ Lexeme Lexer::scan_token() {
     case GOT_un:
       switch (c) {
       case 'i':
-        st = GOT_uni;
+        nextst(GOT_uni);
         break;
       case 's':
-        st = GOT_uns;
+        nextst(GOT_uns);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_un
       break;
@@ -3584,10 +3603,10 @@ Lexeme Lexer::scan_token() {
     case GOT_uni:
       switch (c) {
       case 'o':
-        st = GOT_unio;
+        nextst(GOT_unio);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_uni
       break;
@@ -3596,13 +3615,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'n':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::UNION, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_unio
       break;
@@ -3610,10 +3629,10 @@ Lexeme Lexer::scan_token() {
     case GOT_uns:
       switch (c) {
       case 'i':
-        st = GOT_unsi;
+        nextst(GOT_unsi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_uns
       break;
@@ -3621,10 +3640,10 @@ Lexeme Lexer::scan_token() {
     case GOT_unsi:
       switch (c) {
       case 'g':
-        st = GOT_unsig;
+        nextst(GOT_unsig);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_unsi
       break;
@@ -3632,10 +3651,10 @@ Lexeme Lexer::scan_token() {
     case GOT_unsig:
       switch (c) {
       case 'n':
-        st = GOT_unsign;
+        nextst(GOT_unsign);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_unsig
       break;
@@ -3643,10 +3662,10 @@ Lexeme Lexer::scan_token() {
     case GOT_unsign:
       switch (c) {
       case 'e':
-        st = GOT_unsigne;
+        nextst(GOT_unsigne);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_unsign
       break;
@@ -3655,13 +3674,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'd':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::UNSIGNED, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_unsigne
       break;
@@ -3669,10 +3688,10 @@ Lexeme Lexer::scan_token() {
     case GOT_v:
       switch (c) {
       case 'o':
-        st = GOT_vo;
+        nextst(GOT_vo);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_v
       break;
@@ -3680,13 +3699,13 @@ Lexeme Lexer::scan_token() {
     case GOT_vo:
       switch (c) {
       case 'i':
-        st = GOT_voi;
+        nextst(GOT_voi);
         break;
       case 'l':
-        st = GOT_vol;
+        nextst(GOT_vol);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_vo
       break;
@@ -3695,13 +3714,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'd':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::VOID, 4);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_voi
       break;
@@ -3709,10 +3728,10 @@ Lexeme Lexer::scan_token() {
     case GOT_vol:
       switch (c) {
       case 'a':
-        st = GOT_vola;
+        nextst(GOT_vola);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_vol
       break;
@@ -3720,10 +3739,10 @@ Lexeme Lexer::scan_token() {
     case GOT_vola:
       switch (c) {
       case 't':
-        st = GOT_volat;
+        nextst(GOT_volat);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_vola
       break;
@@ -3731,10 +3750,10 @@ Lexeme Lexer::scan_token() {
     case GOT_volat:
       switch (c) {
       case 'i':
-        st = GOT_volati;
+        nextst(GOT_volati);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_volat
       break;
@@ -3742,10 +3761,10 @@ Lexeme Lexer::scan_token() {
     case GOT_volati:
       switch (c) {
       case 'l':
-        st = GOT_volatil;
+        nextst(GOT_volatil);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_volati
       break;
@@ -3754,13 +3773,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::VOLATILE, 8);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_volatil
       break;
@@ -3768,10 +3787,10 @@ Lexeme Lexer::scan_token() {
     case GOT_w:
       switch (c) {
       case 'h':
-        st = GOT_wh;
+        nextst(GOT_wh);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_w
       break;
@@ -3779,10 +3798,10 @@ Lexeme Lexer::scan_token() {
     case GOT_wh:
       switch (c) {
       case 'i':
-        st = GOT_whi;
+        nextst(GOT_whi);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_wh
       break;
@@ -3790,10 +3809,10 @@ Lexeme Lexer::scan_token() {
     case GOT_whi:
       switch (c) {
       case 'l':
-        st = GOT_whil;
+        nextst(GOT_whil);
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_whi
       break;
@@ -3802,13 +3821,13 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
         if (is_ident_cont(sr_->peek())) {
-          st = GOT_IDENT;
+          nextst(GOT_IDENT);
         } else {
           r(Token::WHILE, 5);
         }
         break;
       default:
-        hold(GOT_IDENT);
+        holdst(GOT_IDENT);
         break;
       } // switch (c) for GOT_whil
       break;
@@ -3820,23 +3839,23 @@ Lexeme Lexer::scan_token() {
         // Eat c and remain in this state.
       } else if (isdig) {
         if (is_int_suffix_start(peek)) {
-          st = GOT_INT_SUFFIX_START;
+          nextst(GOT_INT_SUFFIX_START);
         } else if (peek == 'e' || peek == 'E') {
-          munch_to_state(GOT_FLOAT_CONST_e);
+          advancest(GOT_FLOAT_CONST_e);
         } else if (peek == '.') {
-          munch_to_state(GOT_FLOAT_CONST_DOT);
+          advancest(GOT_FLOAT_CONST_DOT);
         } else if (peek == '\'') {
           // Eat peek and remain in this state.
-          munch();
+          advance();
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
       } else if (is_int_suffix_start(c)) {
-        hold(GOT_INT_SUFFIX_START);
+        holdst(GOT_INT_SUFFIX_START);
       } else if (c == 'e' || c == 'E') {
-        st = GOT_FLOAT_CONST_e;
+        nextst(GOT_FLOAT_CONST_e);
       } else if (c == '.') {
-        st = GOT_FLOAT_CONST_DOT;
+        nextst(GOT_FLOAT_CONST_DOT);
       } else if (c == '\'') {
         // Eat c and remain in this state.
       } else {
@@ -3852,24 +3871,24 @@ Lexeme Lexer::scan_token() {
         // Eat c and remain in this state.
       } else if (isoct) {
         if (is_int_suffix_start(peek)) {
-          st = GOT_INT_SUFFIX_START;
+          nextst(GOT_INT_SUFFIX_START);
         } else if (peek == 'e' || peek == 'E') {
-          munch_to_state(GOT_FLOAT_CONST_e);
+          advancest(GOT_FLOAT_CONST_e);
         } else if (peek == '.') {
-          munch_to_state(GOT_FLOAT_CONST_DOT);
+          advancest(GOT_FLOAT_CONST_DOT);
         } else if (peek == '\'') {
-          munch();
+          advance();
         } else if (std::isdigit(peek)) {
-          st = GOT_INT_LITERAL;
+          nextst(GOT_INT_LITERAL);
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
       } else if (is_int_suffix_start(c)) {
-        hold(GOT_INT_SUFFIX_START);
+        holdst(GOT_INT_SUFFIX_START);
       } else if (c == 'e' || c == 'E') {
-        st = GOT_FLOAT_CONST_e;
+        nextst(GOT_FLOAT_CONST_e);
       } else if (c == '.') {
-        st = GOT_FLOAT_CONST_DOT;
+        nextst(GOT_FLOAT_CONST_DOT);
       } else {
         backup(c);
         r(Token::INTEGER_LIT, lex.length());
@@ -3878,25 +3897,25 @@ Lexeme Lexer::scan_token() {
 
     case GOT_0x:
       if (std::isxdigit(c)) {
-        hold(GOT_HEX_LITERAL);
+        holdst(GOT_HEX_LITERAL);
       } else if (c == '.') {
-        st = GOT_0x_DOT;
+        nextst(GOT_0x_DOT);
       } else {
         print_error(
             std::cerr,
             "Hexadecimal prefix must be followed by a hexadecimal digit.\n");
         backup(c);
-        invalid();
+        rinvalid();
       }
       break;
 
     case GOT_0x_DOT:
       if (std::isxdigit(c)) {
-        st = GOT_HEX_CONST_DOT_XDIGIT;
+        nextst(GOT_HEX_CONST_DOT_XDIGIT);
       } else {
         print_error(std::cerr, "Missing digits in hexadecimal constant.\n");
         backup(c);
-        invalid();
+        rinvalid();
       }
       break;
 
@@ -3907,22 +3926,22 @@ Lexeme Lexer::scan_token() {
         // Eat c and remain in this state.
       } else if (isxdig) {
         if (is_int_suffix_start(peek)) {
-          st = GOT_INT_SUFFIX_START;
+          nextst(GOT_INT_SUFFIX_START);
         } else if (peek == '.') {
-          munch_to_state(GOT_HEX_CONST_DOT);
+          advancest(GOT_HEX_CONST_DOT);
         } else if (peek == 'p' || peek == 'P') {
-          munch_to_state(GOT_HEX_CONST_p);
+          advancest(GOT_HEX_CONST_p);
         } else if (peek == '\'') {
-          munch();
+          advance();
         } else {
           r(Token::INTEGER_LIT, lex.length());
         }
       } else if (is_int_suffix_start(c)) {
-        hold(GOT_INT_SUFFIX_START);
+        holdst(GOT_INT_SUFFIX_START);
       } else if (c == '.') {
-        st = GOT_HEX_CONST_DOT;
+        nextst(GOT_HEX_CONST_DOT);
       } else if (c == 'p' || c == 'P') {
-        st = GOT_HEX_CONST_p;
+        nextst(GOT_HEX_CONST_p);
       } else if (c == '\'') {
         // Eat c and remain in this state.
       } else {
@@ -3937,34 +3956,19 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '\'':
         print_error(std::cerr, "Character constant cannot be empty.\n");
-        invalid();
+        rinvalid();
       case '\n':
         print_error(std::cerr, "Unterminated character constant detected.\n");
         backup(c);
-        invalid();
+        rinvalid();
       case '\\':
-        st = GOT_CHAR_CONST_BS;
+        nextst(GOT_CHAR_CONST_CONT);
+        pushst(GOT_ESCAPE_SEQUENCE);
         break;
       default:
-        st = GOT_CHAR_CONST_CONT;
+        nextst(GOT_CHAR_CONST_CONT);
         break;
       } // switch (c) for GOT_CHAR_CONST_START
-      break;
-
-    case GOT_CHAR_CONST_BS:
-      if (is_simple_escape_sequence(c)) {
-        st = GOT_CHAR_CONST_CONT;
-      } else if (c >= '0' && c <= '7') {
-        st = GOT_CHAR_CONST_BS_OCT;
-      } else if (c == 'x') {
-        st = GOT_CHAR_CONST_BS_x;
-
-        // TODO: add universal-character-name
-      } else {
-        print_error(std::cerr,
-                    "Invalid escape sequence in character constant.\n");
-        invalid();
-      }
       break;
 
     case GOT_CHAR_CONST_CONT:
@@ -3975,9 +3979,9 @@ Lexeme Lexer::scan_token() {
       case '\n':
         print_error(std::cerr, "Unterminated character constant detected.\n");
         backup(c);
-        invalid();
+        rinvalid();
       case '\\':
-        st = GOT_CHAR_CONST_BS;
+        pushst(GOT_ESCAPE_SEQUENCE);
         break;
       default:
         // Eat c and remain in this state.
@@ -3985,44 +3989,16 @@ Lexeme Lexer::scan_token() {
       } // switch (c) for GOT_CHAR_CONST_CONT
       break;
 
-    case GOT_CHAR_CONST_BS_OCT:
-      if (c >= '0' && c <= '7') {
-        st = GOT_CHAR_CONST_BS_OCT2;
-      } else {
-        hold(GOT_CHAR_CONST_CONT);
-      }
-      break;
-
-    case GOT_CHAR_CONST_BS_OCT2:
-      if (c >= '0' && c <= '7') {
-        st = GOT_CHAR_CONST_BS_OCT3;
-      } else {
-        hold(GOT_CHAR_CONST_CONT);
-      }
-      break;
-
-    case GOT_CHAR_CONST_BS_OCT3:
-      hold(GOT_CHAR_CONST_CONT);
-      break;
-
-    case GOT_CHAR_CONST_BS_x:
-      if (std::isxdigit(c)) {
-        // Eat c and remain in this state.
-      } else {
-        hold(GOT_CHAR_CONST_CONT);
-      }
-      break;
-
     case GOT_FLOAT_CONST_DOT: {
       // So far, we have scanned {D}+"."
       const int isdig = std::isdigit(c);
       const char *suffix = "fFlLdD";
       if (isdig) {
-        st = GOT_FLOAT_CONST_DOT_DIGIT;
+        nextst(GOT_FLOAT_CONST_DOT_DIGIT);
       } else if (c == 'e' || c == 'E') {
-        st = GOT_FLOAT_CONST_e;
+        nextst(GOT_FLOAT_CONST_e);
       } else if (std::strchr(suffix, c)) {
-        hold(GOT_FLOAT_CONST_e_SIGN_DIG);
+        holdst(GOT_FLOAT_CONST_e_SIGN_DIG);
       } else {
         backup(c);
         r(Token::FLOAT_LIT, lex.length());
@@ -4034,7 +4010,7 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'e':
       case 'E':
-        st = GOT_FLOAT_CONST_e;
+        nextst(GOT_FLOAT_CONST_e);
         break;
       case 'f':
       case 'F':
@@ -4042,7 +4018,7 @@ Lexeme Lexer::scan_token() {
       case 'L':
       case 'd':
       case 'D':
-        hold(GOT_FLOAT_CONST_e_SIGN_DIG);
+        holdst(GOT_FLOAT_CONST_e_SIGN_DIG);
         break;
       default:
         if (std::isdigit(c)) {
@@ -4059,16 +4035,16 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '-':
       case '+':
-        st = GOT_FLOAT_CONST_e_SIGN;
+        nextst(GOT_FLOAT_CONST_e_SIGN);
         break;
       default:
         if (std::isdigit(c)) {
-          st = GOT_FLOAT_CONST_e_SIGN_DIG;
+          nextst(GOT_FLOAT_CONST_e_SIGN_DIG);
         } else {
           print_error(std::cerr,
                       "Floating point constant missing exponent digit(s).\n");
           backup(c);
-          invalid();
+          rinvalid();
         }
         break;
       } // switch (c) for GOT_FLOAT_CONST_e
@@ -4076,12 +4052,12 @@ Lexeme Lexer::scan_token() {
 
     case GOT_FLOAT_CONST_e_SIGN:
       if (std::isdigit(c)) {
-        st = GOT_FLOAT_CONST_e_SIGN_DIG;
+        nextst(GOT_FLOAT_CONST_e_SIGN_DIG);
       } else {
         print_error(std::cerr,
                     "Floating point constant missing exponent digit(s).\n");
         backup(c);
-        invalid();
+        rinvalid();
       }
       break;
 
@@ -4094,10 +4070,10 @@ Lexeme Lexer::scan_token() {
       case 'L':
         r(Token::FLOAT_LIT, lex.length());
       case 'd':
-        st = GOT_FLOAT_CONST_e_SUFd;
+        nextst(GOT_FLOAT_CONST_e_SUFd);
         break;
       case 'D':
-        st = GOT_FLOAT_CONST_e_SUFD;
+        nextst(GOT_FLOAT_CONST_e_SUFD);
         break;
       case '\'': // Eat c and remain in this state.
         break;
@@ -4123,7 +4099,7 @@ Lexeme Lexer::scan_token() {
         print_error(std::cerr,
                     "Valid floating point constant suffixes are {df dd dl}.\n");
         backup(c);
-        invalid();
+        rinvalid();
         break;
       } // switch (c) for GOT_FLOAT_CONST_e_SUFd
       break;
@@ -4139,7 +4115,7 @@ Lexeme Lexer::scan_token() {
         print_error(std::cerr,
                     "Valid floating point constant suffixes are {DF DD DL}.\n");
         backup(c);
-        invalid();
+        rinvalid();
         break;
       } // switch (c) for GOT_FLOAT_CONST_e_SUFD
       break;
@@ -4148,15 +4124,15 @@ Lexeme Lexer::scan_token() {
       // So far, we have scanned 0x{H}+"."
       const int isxdig = std::isxdigit(c);
       if (isxdig) {
-        st = GOT_HEX_CONST_DOT_XDIGIT;
+        nextst(GOT_HEX_CONST_DOT_XDIGIT);
       } else if (c == 'p' || c == 'P') {
-        st = GOT_HEX_CONST_p;
+        nextst(GOT_HEX_CONST_p);
       } else {
         print_error(
             std::cerr,
             "Hexadecimal floating-point constant missing exponent field.\n");
         backup(c);
-        invalid();
+        rinvalid();
       }
     } break;
 
@@ -4165,7 +4141,7 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'p':
       case 'P':
-        st = GOT_HEX_CONST_p;
+        nextst(GOT_HEX_CONST_p);
         break;
       case '\'': // Eat c and remain in this state.
         break;
@@ -4177,7 +4153,7 @@ Lexeme Lexer::scan_token() {
               std::cerr,
               "Hexadecimal floating-point constant missing exponent field.\n");
           backup(c);
-          invalid();
+          rinvalid();
         }
         break;
       } // switch (c) for GOT_HEX_CONST_DOT_XDIGIT
@@ -4187,16 +4163,16 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '-':
       case '+':
-        st = GOT_HEX_CONST_p_SIGN;
+        nextst(GOT_HEX_CONST_p_SIGN);
         break;
       default:
         if (std::isdigit(c)) {
-          st = GOT_HEX_CONST_p_SIGN_DIG;
+          nextst(GOT_HEX_CONST_p_SIGN_DIG);
         } else {
           print_error(std::cerr,
                       "Floating point constant missing exponent digit(s).\n");
           backup(c);
-          invalid();
+          rinvalid();
         }
         break;
       } // switch (c) for GOT_HEX_CONST_p
@@ -4223,12 +4199,12 @@ Lexeme Lexer::scan_token() {
 
     case GOT_HEX_CONST_p_SIGN:
       if (std::isdigit(c)) {
-        st = GOT_HEX_CONST_p_SIGN_DIG;
+        nextst(GOT_HEX_CONST_p_SIGN_DIG);
       } else {
         print_error(std::cerr,
                     "Floating point constant missing exponent digit(s).\n");
         backup(c);
-        invalid();
+        rinvalid();
       }
       break;
 
@@ -4236,19 +4212,19 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '0':
       case '1':
-        st = GOT_BIN_CONST_CONT;
+        nextst(GOT_BIN_CONST_CONT);
         break;
       default:
         print_error(std::cerr, "Binary constant must begin with a 0 or 1.\n");
         backup(c);
-        invalid();
+        rinvalid();
         break;
       } // switch (c) for GOT_BIN_CONST
       break;
 
     case GOT_BIN_CONST_CONT:
       if (is_int_suffix_start(c)) {
-        hold(GOT_INT_SUFFIX_START);
+        holdst(GOT_INT_SUFFIX_START);
       } else if (c == '0' || c == '1' || c == '\'') {
         // Eat c and remain in this state.
       } else {
@@ -4260,22 +4236,22 @@ Lexeme Lexer::scan_token() {
     case GOT_INT_SUFFIX_START:
       switch (c) {
       case 'u':
-        st = GOT_INT_SUFFIX_u;
+        nextst(GOT_INT_SUFFIX_u);
         break;
       case 'U':
-        st = GOT_INT_SUFFIX_U;
+        nextst(GOT_INT_SUFFIX_U);
         break;
       case 'l':
-        st = GOT_INT_SUFFIX_l;
+        nextst(GOT_INT_SUFFIX_l);
         break;
       case 'L':
-        st = GOT_INT_SUFFIX_L;
+        nextst(GOT_INT_SUFFIX_L);
         break;
       case 'w':
-        st = GOT_INT_SUFFIX_w;
+        nextst(GOT_INT_SUFFIX_w);
         break;
       case 'W':
-        st = GOT_INT_SUFFIX_W;
+        nextst(GOT_INT_SUFFIX_W);
         break;
       } // switch (c) for GOT_INT_SUFFIX_START
       break;
@@ -4285,27 +4261,27 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (peek == 'l')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'L':
         if (peek == 'L')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'w':
         if (peek == 'b') {
-          munch();
+          advance();
           r(Token::INTEGER_LIT, lex.length());
         }
         break;
       case 'W':
         if (peek == 'B') {
-          munch();
+          advance();
           r(Token::INTEGER_LIT, lex.length());
         }
         break;
       } // switch (c) for GOT_INT_SUFFIX_u
       print_error(std::cerr, "Invalid integer suffix after u.\n");
-      invalid();
+      rinvalid();
     } break;
 
     case GOT_INT_SUFFIX_U: { // Ul Ull UL ULL Uwb UWB
@@ -4313,27 +4289,27 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (peek == 'l')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'L':
         if (peek == 'L')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'w':
         if (peek == 'b') {
-          munch();
+          advance();
           r(Token::INTEGER_LIT, lex.length());
         }
         break;
       case 'W':
         if (peek == 'B') {
-          munch();
+          advance();
           r(Token::INTEGER_LIT, lex.length());
         }
         break;
       } // switch (c) for GOT_INT_SUFFIX_U
       print_error(std::cerr, "Invalid integer suffix after U.\n");
-      invalid();
+      rinvalid();
     } break;
 
     case GOT_INT_SUFFIX_l: { // l lu lU ll llu llU
@@ -4341,7 +4317,7 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'l':
         if (peek == 'u' || peek == 'U')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'u':
       case 'U':
@@ -4357,7 +4333,7 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'L':
         if (peek == 'u' || peek == 'U')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       case 'u':
       case 'U':
@@ -4373,11 +4349,11 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'b':
         if (peek == 'u' || peek == 'U')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       default:
         print_error(std::cerr, "Invalid integer suffix after w.\n");
-        invalid();
+        rinvalid();
       } // switch (c) for GOT_INT_SUFFIX_w
     } break;
 
@@ -4386,11 +4362,11 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case 'B':
         if (peek == 'u' || peek == 'U')
-          munch();
+          advance();
         r(Token::INTEGER_LIT, lex.length());
       default:
         print_error(std::cerr, "Invalid integer suffix after W.\n");
-        invalid();
+        rinvalid();
       } // switch (c) for GOT_INT_SUFFIX_W
     } break;
 
@@ -4402,9 +4378,9 @@ Lexeme Lexer::scan_token() {
       case '\n':
         print_error(std::cerr, "Unterminated string literal detected.\n");
         backup(c);
-        invalid();
+        rinvalid();
       case '\\':
-        st = GOT_STRING_LIT_BS;
+        pushst(GOT_ESCAPE_SEQUENCE);
         break;
       default:
         // Eat c and remain in this state.
@@ -4412,182 +4388,182 @@ Lexeme Lexer::scan_token() {
       } // switch (c) for GOT_STRING_LIT_START
       break;
 
-    case GOT_STRING_LIT_BS:
+    case GOT_ESCAPE_SEQUENCE:
       if (is_simple_escape_sequence(c)) {
-        st = GOT_STRING_LIT_START;
+        popst();
       } else if (c >= '0' && c <= '7') {
-        st = GOT_STRING_LIT_BS_OCT1;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_OCT1);
       } else if (c == 'x') {
-        st = GOT_STRING_LIT_BS_x;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_x);
       } else if (c == 'u') {
-        st = GOT_STRING_LIT_BS_u0;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_u0);
       } else if (c == 'U') {
-        st = GOT_STRING_LIT_BS_U0;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U0);
       } else {
-        print_error(std::cerr, "Invalid escape sequence in string literal.\n");
-        invalid();
+        print_error(std::cerr, "Invalid escape sequence.\n");
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_OCT1:
+    case GOT_ESCAPE_SEQUENCE_BS_OCT1:
       if (c >= '0' && c <= '7') {
-        st = GOT_STRING_LIT_BS_OCT2;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_OCT2);
       } else {
-        hold(GOT_STRING_LIT_START);
+        pop_holdst();
       }
       break;
 
-    case GOT_STRING_LIT_BS_OCT2:
+    case GOT_ESCAPE_SEQUENCE_BS_OCT2:
       if (c >= '0' && c <= '7') {
-        st = GOT_STRING_LIT_START;
+        popst();
       } else {
-        hold(GOT_STRING_LIT_START);
+        pop_holdst();
       }
       break;
 
-    case GOT_STRING_LIT_BS_x:
+    case GOT_ESCAPE_SEQUENCE_BS_x:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_x_XDIGIT;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_x_XDIGIT);
       } else {
         print_error(std::cerr,
                     "Missing digits in hexadecimal escape sequence.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_x_XDIGIT:
+    case GOT_ESCAPE_SEQUENCE_BS_x_XDIGIT:
       if (std::isxdigit(c)) {
         // Eat c and remain in this state.
       } else {
-        hold(GOT_STRING_LIT_START);
+        pop_holdst();
       }
       break;
 
-    case GOT_STRING_LIT_BS_u0:
+    case GOT_ESCAPE_SEQUENCE_BS_u0:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_u1;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_u1);
       } else {
         print_error(std::cerr,
                     "universal character name must have the form \\uhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_u1:
+    case GOT_ESCAPE_SEQUENCE_BS_u1:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_u2;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_u2);
       } else {
         print_error(std::cerr,
                     "universal character name must have the form \\uhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_u2:
+    case GOT_ESCAPE_SEQUENCE_BS_u2:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_u3;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_u3);
       } else {
         print_error(std::cerr,
                     "universal character name must have the form \\uhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_u3:
+    case GOT_ESCAPE_SEQUENCE_BS_u3:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_START;
+        popst();
       } else {
         print_error(std::cerr,
                     "universal character name must have the form \\uhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U0:
+    case GOT_ESCAPE_SEQUENCE_BS_U0:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U1;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U1);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U1:
+    case GOT_ESCAPE_SEQUENCE_BS_U1:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U2;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U2);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U2:
+    case GOT_ESCAPE_SEQUENCE_BS_U2:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U3;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U3);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U3:
+    case GOT_ESCAPE_SEQUENCE_BS_U3:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U4;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U4);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U4:
+    case GOT_ESCAPE_SEQUENCE_BS_U4:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U5;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U5);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U5:
+    case GOT_ESCAPE_SEQUENCE_BS_U5:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U6;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U6);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U6:
+    case GOT_ESCAPE_SEQUENCE_BS_U6:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_BS_U7;
+        nextst(GOT_ESCAPE_SEQUENCE_BS_U7);
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
-    case GOT_STRING_LIT_BS_U7:
+    case GOT_ESCAPE_SEQUENCE_BS_U7:
       if (std::isxdigit(c)) {
-        st = GOT_STRING_LIT_START;
+        popst();
       } else {
         print_error(
             std::cerr,
             "Universal character name must have the form \\Uhhhhhhhh.\n");
-        invalid();
+        rinvalid();
       }
       break;
 
@@ -4718,11 +4694,11 @@ Lexeme Lexer::scan_token() {
 
     */
     default:
-      invalid();
+      rinvalid();
     }
   }
 
-  invalid();
+  rinvalid();
 }
 
 std::vector<Lexeme> scan_tokens(const char *s) {
