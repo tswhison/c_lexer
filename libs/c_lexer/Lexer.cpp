@@ -35,15 +35,30 @@ namespace c_lexer {
 
 Lexer::Lexer(std::unique_ptr<SourceReader> &&sr)
     : sr_(std::move(sr)), row_(1), col_(1) {
-  lookahead_.push_back(scan_token());
+  lookahead_.push(scan_token());
 }
 
-Lexeme Lexer::peek() { return lookahead_[0]; }
+const Lexeme &Lexer::peek() const { return lookahead_.front(); }
 
 Lexeme Lexer::eat() {
-  Lexeme l = std::move(lookahead_[0]);
-  lookahead_[0] = scan_token();
+  Lexeme l(lookahead_.front());
+
+  lookahead_.pop();
+  if (lookahead_.empty())
+    lookahead_.push(scan_token());
+
   return l;
+}
+
+void Lexer::preload(std::size_t n) {
+  if (lookahead_.back().token() == Token::END)
+    return;
+
+  for (std::size_t i = 0; i < n; ++i) {
+    lookahead_.push(scan_token());
+    if (lookahead_.back().token() == Token::END)
+      return;
+  }
 }
 
 #define eat_whitespace()                                                       \

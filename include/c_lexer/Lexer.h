@@ -25,8 +25,8 @@
 
 #include <iostream>
 #include <memory>
+#include <queue>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -74,8 +74,9 @@ public:
   explicit Lexer(std::unique_ptr<SourceReader> &&sr);
   ~Lexer() = default;
 
-  Lexeme peek();
+  const Lexeme &peek() const;
   Lexeme eat();
+  void preload(std::size_t);
 
   template <typename... Args>
   std::ostream &print_error(std::ostream &os, Args... args) {
@@ -95,7 +96,7 @@ protected:
   std::unique_ptr<SourceReader> sr_;
   std::uint32_t row_;
   std::uint32_t col_;
-  std::vector<Lexeme> lookahead_;
+  std::queue<Lexeme> lookahead_;
 };
 
 std::vector<Lexeme> scan_tokens(const char *s);

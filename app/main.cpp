@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<SourceReader> reader = std::make_unique<SourceReader>(in);
 
   Lexer lexer(std::move(reader));
+  lexer.preload(3);
 
   while (lexer.peek() != Token::END) {
     Lexeme lexeme = lexer.eat();
