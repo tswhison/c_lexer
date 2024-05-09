@@ -1315,3 +1315,99 @@ TEST_P(IdentifierFixture, identtest) {
 
 INSTANTIATE_TEST_SUITE_P(my, IdentifierFixture,
                          ::testing::ValuesIn(identifiers));
+
+void string_lit_test(const char *src) {
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  ASSERT_EQ(static_cast<std::vector<Lexeme>::size_type>(2), v.size());
+  EXPECT_EQ(Token::STRING_LIT, v[0]);
+  EXPECT_STREQ(v[0].lexeme_.c_str(), src);
+
+  EXPECT_EQ(Token::END, v[1]);
+}
+
+class StringLitFixture : public ::testing::TestWithParam<const char *> {};
+
+const char *string_lits[] = {
+    R"s(u"")s",
+    R"s(u8"")s",
+    R"s(U"")s",
+    R"s(L"")s",
+    R"s("")s",
+
+    R"s("\'\"\?\\\a\b\f\n\r\t\v")s",
+
+    R"s("\0")s",
+    R"s("\77")s",
+    R"s("\777")s",
+
+    R"s("\xb")s",
+    R"s("\xbe")s",
+    R"s("\xbee")s",
+    R"s("\xbeef")s",
+
+    R"s("\uabcd")s",
+    R"s("\Uabcdef01")s",
+
+    R"s(u8"a\n")s",
+    R"s(L"abcdefghijklmnopqrstuvwxyz")s",
+    R"s(L"0123456789abcdefgABCDEFG")s",
+};
+
+TEST_P(StringLitFixture, strlittest) {
+  ASSERT_NO_FATAL_FAILURE(string_lit_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, StringLitFixture,
+                         ::testing::ValuesIn(string_lits));
+
+using NegStrTest_t = std::tuple<const char *, std::vector<Token>>;
+
+void neg_str_lit_test(const NegStrTest_t &data) {
+  const char *src = std::get<0>(data);
+  const std::vector<Token> &tokens = std::get<1>(data);
+
+  std::vector<Lexeme> v = scan_tokens(src);
+
+  ASSERT_EQ(tokens.size(), v.size());
+
+  int i = 0;
+  for (const Token &t : tokens) {
+    EXPECT_EQ(t, v[i++]);
+  }
+}
+
+class NegStringLiteralFixture : public ::testing::TestWithParam<NegStrTest_t> {
+};
+
+NegStrTest_t negative_str[] = {
+    {R"s("
+")s",
+     {Token::INVALID, Token::INVALID, Token::END}},
+
+    {R"s("\j")s", {Token::INVALID, Token::INVALID, Token::END}},
+
+    {R"s("\x")s", {Token::INVALID, Token::END}},
+    {R"s("\xj")s", {Token::INVALID, Token::INVALID, Token::END}},
+
+    {R"s("\u")s", {Token::INVALID, Token::END}},
+    {R"s("\ua")s", {Token::INVALID, Token::END}},
+    {R"s("\uab")s", {Token::INVALID, Token::END}},
+    {R"s("\uabc")s", {Token::INVALID, Token::END}},
+
+    {R"s("\U")s", {Token::INVALID, Token::END}},
+    {R"s("\Ua")s", {Token::INVALID, Token::END}},
+    {R"s("\Uab")s", {Token::INVALID, Token::END}},
+    {R"s("\Uabc")s", {Token::INVALID, Token::END}},
+    {R"s("\Uabcd")s", {Token::INVALID, Token::END}},
+    {R"s("\Uabcde")s", {Token::INVALID, Token::END}},
+    {R"s("\Uabcdef")s", {Token::INVALID, Token::END}},
+    {R"s("\Uabcdef0")s", {Token::INVALID, Token::END}},
+};
+
+TEST_P(NegStringLiteralFixture, negativestrtest) {
+  ASSERT_NO_FATAL_FAILURE(neg_str_lit_test(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(my, NegStringLiteralFixture,
+                         ::testing::ValuesIn(negative_str));

@@ -112,6 +112,11 @@ inline bool is_int_suffix_start(char c) {
   return std::strchr("uUlLwW", c) != NULL;
 }
 
+inline bool
+is_simple_escape_sequence(char c) { // c is the char after the backslash
+  return std::strchr("\'\"?\\abfnrtv", c) != NULL;
+}
+
 #define START 0
 
 #define GOT_GT 1
@@ -407,6 +412,25 @@ inline bool is_int_suffix_start(char c) {
 #define GOT_INT_SUFFIX_w 335
 #define GOT_INT_SUFFIX_W 336
 
+#define GOT_STRING_LIT_START 337
+#define GOT_STRING_LIT_BS 338
+#define GOT_STRING_LIT_BS_OCT1 339
+#define GOT_STRING_LIT_BS_OCT2 340
+#define GOT_STRING_LIT_BS_x 341
+#define GOT_STRING_LIT_BS_x_XDIGIT 342
+#define GOT_STRING_LIT_BS_u0 343
+#define GOT_STRING_LIT_BS_u1 344
+#define GOT_STRING_LIT_BS_u2 345
+#define GOT_STRING_LIT_BS_u3 346
+#define GOT_STRING_LIT_BS_U0 347
+#define GOT_STRING_LIT_BS_U1 348
+#define GOT_STRING_LIT_BS_U2 349
+#define GOT_STRING_LIT_BS_U3 350
+#define GOT_STRING_LIT_BS_U4 351
+#define GOT_STRING_LIT_BS_U5 352
+#define GOT_STRING_LIT_BS_U6 353
+#define GOT_STRING_LIT_BS_U7 354
+
 #define GOT_IDENT 999
 
 #define THE_END 1000
@@ -583,6 +607,9 @@ Lexeme Lexer::scan_token() {
         break;
       case '\'':
         st = GOT_CHAR_CONST_START;
+        break;
+      case '\"':
+        st = GOT_STRING_LIT_START;
         break;
       case '0': {
         const char peek = sr_->peek();
@@ -3485,14 +3512,17 @@ Lexeme Lexer::scan_token() {
       } // switch (c) for GOT_typeof_unqua
       break;
 
-    case GOT_u:
+    case GOT_u: {
+      const int peek = sr_->peek();
       switch (c) {
       case 'n':
         st = GOT_un;
         break;
       case '8':
-        if (sr_->peek() == '\'') {
+        if (peek == '\'') {
           munch_to_state(GOT_CHAR_CONST_START);
+        } else if (peek == '\"') {
+          munch_to_state(GOT_STRING_LIT_START);
         } else {
           st = GOT_IDENT;
         }
@@ -3500,16 +3530,22 @@ Lexeme Lexer::scan_token() {
       case '\'':
         st = GOT_CHAR_CONST_START;
         break;
+      case '\"':
+        st = GOT_STRING_LIT_START;
+        break;
       default:
         hold(GOT_IDENT);
         break;
       } // switch (c) for GOT_u
-      break;
+    } break;
 
     case GOT_U:
       switch (c) {
       case '\'':
         st = GOT_CHAR_CONST_START;
+        break;
+      case '\"':
+        st = GOT_STRING_LIT_START;
         break;
       default:
         hold(GOT_IDENT);
@@ -3521,6 +3557,9 @@ Lexeme Lexer::scan_token() {
       switch (c) {
       case '\'':
         st = GOT_CHAR_CONST_START;
+        break;
+      case '\"':
+        st = GOT_STRING_LIT_START;
         break;
       default:
         hold(GOT_IDENT);
@@ -3912,20 +3951,21 @@ Lexeme Lexer::scan_token() {
       } // switch (c) for GOT_CHAR_CONST_START
       break;
 
-    case GOT_CHAR_CONST_BS: {
-      const char *escapes = "\'\"?\\abfnrtv";
-      if (std::strchr(escapes, c)) {
+    case GOT_CHAR_CONST_BS:
+      if (is_simple_escape_sequence(c)) {
         st = GOT_CHAR_CONST_CONT;
       } else if (c >= '0' && c <= '7') {
         st = GOT_CHAR_CONST_BS_OCT;
       } else if (c == 'x') {
         st = GOT_CHAR_CONST_BS_x;
+
+        // TODO: add universal-character-name
       } else {
         print_error(std::cerr,
                     "Invalid escape sequence in character constant.\n");
         invalid();
       }
-    } break;
+      break;
 
     case GOT_CHAR_CONST_CONT:
       switch (c) {
@@ -4354,6 +4394,203 @@ Lexeme Lexer::scan_token() {
       } // switch (c) for GOT_INT_SUFFIX_W
     } break;
 
+    case GOT_STRING_LIT_START: // so far we have {encoding-prefix}?["]
+      switch (c) {
+      case '\"':
+        r(Token::STRING_LIT, lex.length());
+      case EOF:
+      case '\n':
+        print_error(std::cerr, "Unterminated string literal detected.\n");
+        backup(c);
+        invalid();
+      case '\\':
+        st = GOT_STRING_LIT_BS;
+        break;
+      default:
+        // Eat c and remain in this state.
+        break;
+      } // switch (c) for GOT_STRING_LIT_START
+      break;
+
+    case GOT_STRING_LIT_BS:
+      if (is_simple_escape_sequence(c)) {
+        st = GOT_STRING_LIT_START;
+      } else if (c >= '0' && c <= '7') {
+        st = GOT_STRING_LIT_BS_OCT1;
+      } else if (c == 'x') {
+        st = GOT_STRING_LIT_BS_x;
+      } else if (c == 'u') {
+        st = GOT_STRING_LIT_BS_u0;
+      } else if (c == 'U') {
+        st = GOT_STRING_LIT_BS_U0;
+      } else {
+        print_error(std::cerr, "Invalid escape sequence in string literal.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_OCT1:
+      if (c >= '0' && c <= '7') {
+        st = GOT_STRING_LIT_BS_OCT2;
+      } else {
+        hold(GOT_STRING_LIT_START);
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_OCT2:
+      if (c >= '0' && c <= '7') {
+        st = GOT_STRING_LIT_START;
+      } else {
+        hold(GOT_STRING_LIT_START);
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_x:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_x_XDIGIT;
+      } else {
+        print_error(std::cerr,
+                    "Missing digits in hexadecimal escape sequence.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_x_XDIGIT:
+      if (std::isxdigit(c)) {
+        // Eat c and remain in this state.
+      } else {
+        hold(GOT_STRING_LIT_START);
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_u0:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_u1;
+      } else {
+        print_error(std::cerr,
+                    "universal character name must have the form \\uhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_u1:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_u2;
+      } else {
+        print_error(std::cerr,
+                    "universal character name must have the form \\uhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_u2:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_u3;
+      } else {
+        print_error(std::cerr,
+                    "universal character name must have the form \\uhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_u3:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_START;
+      } else {
+        print_error(std::cerr,
+                    "universal character name must have the form \\uhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U0:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U1;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U1:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U2;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U2:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U3;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U3:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U4;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U4:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U5;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U5:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U6;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U6:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_BS_U7;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
+    case GOT_STRING_LIT_BS_U7:
+      if (std::isxdigit(c)) {
+        st = GOT_STRING_LIT_START;
+      } else {
+        print_error(
+            std::cerr,
+            "Universal character name must have the form \\Uhhhhhhhh.\n");
+        invalid();
+      }
+      break;
+
     /*
       String Literals
 
@@ -4446,12 +4683,12 @@ Lexeme Lexer::scan_token() {
       Integer literals:
 
         Integer Suffix
-        IS = u  ul  uL  ull  uLL -or-
-             U  Ul  UL  Ull  ULL -or-
-             l  lu  lU -or-
-             L  Lu  LU -or-
-             ll llu llU -or-
-             LL LLu LLU
+       IS =  ul uL Ul UL
+             ull uLL Ull ULL
+             uwb uWB Uwb UWB
+             l L lu lU Lu LU
+             ll LL llu llU LLu LLU
+             wb WB wbu wbU WBu WBU
 
         Digit
         D = [0-9]
