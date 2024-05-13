@@ -27,8 +27,11 @@ using c_lexer::Lexer;
 using c_lexer::SourceReader;
 using c_lexer::Token;
 
+#include <algorithm>
 #include <fstream>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 int main(int argc, char *argv[]) {
   std::ifstream f;
@@ -43,8 +46,16 @@ int main(int argc, char *argv[]) {
   Lexer lexer(std::move(reader));
   lexer.preload(3);
 
+  std::unordered_map<const char *, std::uint32_t> counts;
+
   while (lexer.peek() != Token::END) {
     Lexeme lexeme = lexer.eat();
+
+    if (auto iter = counts.find(lexeme.token_str()); iter != counts.end()) {
+      iter->second++;
+    } else {
+      counts.insert({lexeme.token_str(), 1});
+    }
 
     std::cout << lexeme.lexeme_ << " (" << lexeme.row_ << "," << lexeme.col_
               << ") : Token::" << lexeme.token_str() << '\n';
@@ -52,6 +63,16 @@ int main(int argc, char *argv[]) {
 
   if (f.is_open())
     f.close();
+
+  std::vector<std::pair<const char *, std::uint32_t>> v(counts.begin(),
+                                                        counts.end());
+  std::sort(v.begin(), v.end(),
+            [](auto &left, auto &right) { return left.second > right.second; });
+
+  std::cout << '\n';
+  for (const auto &pair : v) {
+    std::cout << "Token::" << pair.first << ' ' << pair.second << '\n';
+  }
 
   return 0;
 }

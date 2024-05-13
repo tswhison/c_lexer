@@ -41,7 +41,7 @@ Lexer::Lexer(std::unique_ptr<SourceReader> &&sr)
 const Lexeme &Lexer::peek() const { return lookahead_.front(); }
 
 Lexeme Lexer::eat() {
-  Lexeme l(lookahead_.front());
+  Lexeme l(std::move(lookahead_.front()));
 
   lookahead_.pop();
   if (lookahead_.empty())
