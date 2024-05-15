@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 myproj_add_exe(
+  EXPORT
+  c_lexer-targets
   TARGET
   c_lexview
   COMPONENT

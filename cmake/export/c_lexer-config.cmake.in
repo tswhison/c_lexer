@@ -1,0 +1,10 @@
+get_filename_component(_curdir "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(_prefix "${_curdir}/../.." ABSOLUTE)
+
+include(
+  "${_prefix}/lib/@CMAKE_PROJECT_NAME@-@MYPROJ_VERSION@/@CMAKE_PROJECT_NAME@-targets.cmake"
+)
+
+set(@CMAKE_PROJECT_NAME@_INCLUDE_DIRS "${_prefix}/include")
+set(@CMAKE_PROJECT_NAME@_LIBRARIES
+    "${_prefix}/@MYPROJ_LIB_INSTALL_DIR@/lib@CMAKE_PROJECT_NAME@.so")

@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 myproj_add_shared_lib(
+  EXPORT
+  c_lexer-targets
   TARGET
   c_lexer
   COMPONENT

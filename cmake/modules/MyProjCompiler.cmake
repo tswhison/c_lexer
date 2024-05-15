@@ -196,7 +196,7 @@ function(myproj_add_exe)
 
   if(MYPROJ_ADD_EXE_INCS)
     target_include_directories(${MYPROJ_ADD_EXE_TARGET}
-                               PUBLIC ${MYPROJ_ADD_EXE_INCS})
+                               PRIVATE ${MYPROJ_ADD_EXE_INCS})
   endif()
 
   set(MYPROJ_DEFS HAVE_CONFIG_H=1 ${MYPROJ_ADD_EXE_DEFS})

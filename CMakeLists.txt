@@ -21,10 +21,9 @@
 # SOFTWARE.
 
 cmake_minimum_required(VERSION 3.14)
-# FIXME: rename the project.
+
 project(c_lexer C CXX)
 
-# FIXME: global search/replace of MYPROJ.
 set(MYPROJ_INCLUDE_PATH
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     CACHE PATH "Project include directory")
@@ -90,9 +89,28 @@ include(MyProjCompiler)
 # ##############################################################################
 # install header files
 # ##############################################################################
-install(DIRECTORY include/myproj DESTINATION include)
+install(DIRECTORY include/${CMAKE_PROJECT_NAME} DESTINATION include)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config/config.h.in"
                "${CMAKE_BINARY_DIR}/include/config.h")
+
+# ##############################################################################
+# make this project discoverable
+# ##############################################################################
+install(EXPORT ${CMAKE_PROJECT_NAME}-targets
+        DESTINATION lib/${CMAKE_PROJECT_NAME}-${MYPROJ_VERSION})
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config.cmake.in"
+  "${CMAKE_BINARY_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config.cmake" @ONLY)
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config-version.cmake.in"
+  "${CMAKE_BINARY_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config-version.cmake"
+  @ONLY)
+
+install(
+  FILES
+    "${CMAKE_BINARY_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config.cmake"
+    "${CMAKE_BINARY_DIR}/cmake/export/${CMAKE_PROJECT_NAME}-config-version.cmake"
+  DESTINATION "lib/${CMAKE_PROJECT_NAME}-${MYPROJ_VERSION}")
 
 option(MYPROJ_BUILD_TESTS "Enable unit test build" OFF)
 mark_as_advanced(MYPROJ_BUILD_TESTS)
