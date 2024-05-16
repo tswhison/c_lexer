@@ -78,18 +78,21 @@ public:
   Lexeme eat();
   void preload(std::size_t);
 
-  template <typename... Args>
-  std::ostream &print_error(std::ostream &os, Args... args) {
+  template <typename S, typename... Args>
+  S &print_error(S &os, Args &&...args) {
     return printer(os, "c_lexer[", row_, ',', col_, "]: ", args...);
   }
 
 protected:
   Lexeme scan_token();
 
-  template <typename... Args>
-  std::ostream &printer(std::ostream &os, Args... args) {
-    auto tmp = {(os << args, 0)...};
-    (void)tmp;
+  template <typename S, typename T0, typename... Ts>
+  S &printer(S &os, T0 &&t0, Ts &&...ts) {
+    os << std::forward<T0>(t0);
+
+    if constexpr (sizeof...(ts))
+      printer(os, std::forward<Ts>(ts)...);
+
     return os;
   }
 
